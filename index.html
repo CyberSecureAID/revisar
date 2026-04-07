@@ -30,7 +30,7 @@ input{font-family:var(--mono)}
 #app{
   height:100vh;
   display:grid;
-  grid-template-rows:44px 38px 1fr 28px 42px;
+  grid-template-rows:44px 34px 1fr 28px 42px;
   background:var(--bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;
   -webkit-mask-image:-webkit-radial-gradient(white,black);
 }
@@ -71,30 +71,36 @@ header{
 
 /* ── PROVIDER STRIP ── */
 #provider-strip{
-  grid-row:2;display:flex;align-items:center;gap:6px;padding:0 10px;
+  grid-row:2;display:flex;align-items:center;gap:5px;padding:0 8px;
   border-bottom:1px solid var(--border);background:var(--bg2);
   overflow-x:auto;scrollbar-width:none;flex-shrink:0;
 }
 #provider-strip::-webkit-scrollbar{display:none}
-.refresh-strip-btn{
-  display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;
+
+/* Icon-only refresh button — small, round, icon only */
+.refresh-icon-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:50%;flex-shrink:0;
   border:1px solid var(--border);background:rgba(255,255,255,0.04);
-  color:var(--t2);font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;
-  transition:background var(--ease),color var(--ease),border-color var(--ease);
+  color:var(--t2);font-size:12px;cursor:pointer;
+  transition:background var(--ease),color var(--ease),border-color var(--ease),transform var(--ease);
+  line-height:1;
 }
-.refresh-strip-btn:hover{background:var(--em-dim);border-color:var(--emerald);color:var(--emerald)}
-.refresh-strip-btn.spinning .refresh-icon{display:inline-block;animation:spinOnce .5s linear}
+.refresh-icon-btn:hover{background:var(--em-dim);border-color:var(--emerald);color:var(--emerald)}
+.refresh-icon-btn:active{transform:scale(0.92)}
+.refresh-icon-btn.spinning .ri-icon{display:inline-block;animation:spinOnce .5s linear}
 @keyframes spinOnce{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-.strip-sep{width:1px;height:16px;background:var(--border);flex-shrink:0;margin:0 2px}
+
+.strip-sep{width:1px;height:14px;background:var(--border);flex-shrink:0;margin:0 1px}
 .prov-chip{
-  display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;
+  display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;
   border:1px solid var(--border);background:rgba(255,255,255,0.03);
   cursor:pointer;transition:background var(--ease),border-color var(--ease);
   white-space:nowrap;flex-shrink:0;font-size:10px;font-weight:600;color:var(--t2);
 }
 .prov-chip:hover{background:rgba(255,255,255,0.07);border-color:var(--border2)}
 .prov-chip.active{background:var(--cyan-dim);border-color:var(--cyan);color:var(--cyan)}
-.prov-chip .prov-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--t3)}
+.prov-chip .prov-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;background:var(--t3)}
 .prov-chip.active .prov-dot{background:var(--cyan);box-shadow:0 0 5px var(--cyan)}
 
 /* ── COIN LIST ── */
@@ -170,14 +176,14 @@ header{
   position:relative;overflow:visible;
 }
 .adc-dist-bar-fill{
-  height:100%;border-radius:2px;transition:width 0.5s ease;
+  height:100%;border-radius:2px;transition:width 0.4s ease;
   min-width:2px;
 }
 .adc-dist-bar-fill.long{background:linear-gradient(90deg,rgba(0,229,160,0.3),var(--emerald));}
 .adc-dist-bar-fill.short{background:linear-gradient(90deg,rgba(255,56,96,0.3),var(--rose));}
 .adc-dist-pct{
   font-family:var(--mono);font-size:9px;font-weight:700;
-  flex-shrink:0;min-width:52px;text-align:right;
+  flex-shrink:0;min-width:56px;text-align:right;
   transition:color 0.3s;
 }
 .adc-dist-pct.long{color:var(--emerald);}
@@ -446,8 +452,9 @@ footer{
   </header>
 
   <div id="provider-strip">
-    <button class="refresh-strip-btn" id="refresh-strip-btn" onclick="UI.manualRefresh()" title="Actualizar precios">
-      <span class="refresh-icon">↺</span> Actualizar
+    <!-- Icon-only refresh button: small, round, no text -->
+    <button class="refresh-icon-btn" id="refresh-strip-btn" onclick="UI.manualRefresh()" title="Actualizar precios">
+      <span class="ri-icon">↺</span>
     </button>
     <div class="strip-sep"></div>
   </div>
@@ -635,8 +642,6 @@ class NotificationManager{
   clearAll(sym){Object.keys(this._last).filter(k=>k.startsWith(`${sym}:`)).forEach(k=>delete this._last[k])}
   _flashCard(el,sym){el.classList.add('flashing');if(this._flash[sym])clearTimeout(this._flash[sym]);this._flash[sym]=setTimeout(()=>el.classList.remove('flashing'),30000)}
   stopFlash(sym){document.getElementById(`card-${sym}`)?.classList.remove('flashing');if(this._flash[sym]){clearTimeout(this._flash[sym]);delete this._flash[sym]}}
-  
-  // Persistent repeating beep — plays until stopPersistentSound() called
   startPersistentSound(isLong){
     this.stopPersistentSound();
     const freq1=isLong?880:1047;const freq2=isLong?1047:880;
@@ -653,7 +658,6 @@ class NotificationManager{
     if(this._persistentHandle){clearTimeout(this._persistentHandle);this._persistentHandle=null;}
     this._persistentSoundActive=false;
   }
-  
   playBeep(times,freq1,freq2){this._beep(times,freq1,freq2)}
   _beep(times=3,freq1=1047,freq2=880){
     let c=0;const inf=times===0;
@@ -714,7 +718,7 @@ const Toast={
 let config=null,currentAlertSym=null,refreshHandle=null,providers=[];
 const notifMgr=new window.__NotifMgr({cooldownMs:120000});
 const adcStatus={};
-const adcDistances={};  // per-symbol distance info
+const adcDistances={};
 let adcCyclesDetected=0;
 
 const App={
@@ -744,7 +748,7 @@ const App={
       if(r.ok){const d=await r.json();document.getElementById('cl-ver').textContent=`v${d.version}`;document.getElementById('cl-list').innerHTML=(d.changelog||[]).map(i=>`<li class="cl-item">${i}</li>`).join('');}
     }catch(_){}
 
-    // ADC signal handler — plays persistent sound, shows alert window via main process
+    // ADC signal handler
     window.sniperAPI.onAdcSignal((data)=>{
       adcStatus[data.symbol]={ready:true,ciclo:data.type==='LONG'?1:-1};
       adcCyclesDetected++;
@@ -754,7 +758,6 @@ const App={
       window.sniperAPI?.log('ALERT',`[ADC] ${data.type} ${data.symbol}`,{price:data.price});
     });
 
-    // Persistent sound control from main process
     window.sniperAPI.onStartSound((data)=>{
       if(config?.settings?.soundEnabled!==false){
         notifMgr.startPersistentSound(data.type==='LONG');
@@ -764,7 +767,7 @@ const App={
       notifMgr.stopPersistentSound();
     });
 
-    // ADC distance updates
+    // ADC distance updates from main process — update UI immediately
     window.sniperAPI.onAdcDistance((data)=>{
       adcDistances[data.symbol]=data;
       UI.updateCardDistance(data.symbol,data);
@@ -857,19 +860,19 @@ const UI={
     await App.refresh();
   },
 
-  // Update ADC distance display on a coin card
+  // Update ADC distance display on a coin card with fresh live price data
   updateCardDistance(sym, distData){
-    const distRow=document.getElementById(`adc-dist-row-${sym}`);
     const distPct=document.getElementById(`adc-dist-pct-${sym}`);
     const distBar=document.getElementById(`adc-dist-bar-${sym}`);
     const distLine=document.getElementById(`adc-dist-line-${sym}`);
-    if(!distRow||!distData)return;
+    const distRowEl=document.getElementById(`adc-dist-row-${sym}`);
+    if(!distData||!distPct) return;
 
     const pct=distData.distancePct;
     const trend=distData.trend;
     const absPct=Math.abs(pct);
 
-    // Bar fill: 0%=at line, 10%+=full bar (scale: 0-10%)
+    // Bar fill: scale 0–10% → 0–100%
     const barPct=Math.min(100,(absPct/10)*100);
     if(distBar){distBar.style.width=`${barPct}%`;distBar.className=`adc-dist-bar-fill ${trend.toLowerCase()}`;}
 
@@ -991,7 +994,7 @@ const UI={
         else{barLedClass='adc-led';barLabelClass='adc-bar-label';barLabelText='ADC ACTIVO';}
       }
 
-      // Distance display
+      // Get current distance data - prefer live data from adcDistances store
       const distData=adcDistances[sym];
       const distReady=distData&&st?.ready;
       const distSign=distData?(distData.distancePct>=0?'+':''):'';
