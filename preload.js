@@ -19,22 +19,31 @@ contextBridge.exposeInMainWorld('sniperAPI', {
   sendNotification: ({ title, body }) => ipcRenderer.invoke('notification:send', { title, body }),
 
   // Window
-  closeWindow:    ()     => ipcRenderer.invoke('window:close'),
-  minimizeWindow: ()     => ipcRenderer.invoke('window:minimize'),
-  maximizeWindow: ()     => ipcRenderer.invoke('window:maximize'),
-  setAlwaysOnTop: (flag) => ipcRenderer.invoke('window:setAlwaysOnTop', flag),
-  openAdmin:      ()     => ipcRenderer.invoke('window:openAdmin'),
+  closeWindow:      ()     => ipcRenderer.invoke('window:close'),
+  closeAlertWindow: ()     => ipcRenderer.invoke('window:close-alert'),
+  minimizeWindow:   ()     => ipcRenderer.invoke('window:minimize'),
+  maximizeWindow:   ()     => ipcRenderer.invoke('window:maximize'),
+  setAlwaysOnTop:   (flag) => ipcRenderer.invoke('window:setAlwaysOnTop', flag),
+  openAdmin:        ()     => ipcRenderer.invoke('window:openAdmin'),
 
   // Logs
   getLogs: ()                       => ipcRenderer.invoke('logs:read'),
   log:     (level, message, meta)   => ipcRenderer.invoke('log:write', { level, message, meta }),
 
   // ADC — Algoritmo de Detección de Ciclos
-  getAdcStatus:   ()       => ipcRenderer.invoke('adc:status'),
-  calibrateAdc:   (symbol) => ipcRenderer.invoke('adc:calibrate', { symbol }),
+  getAdcStatus:   ()               => ipcRenderer.invoke('adc:status'),
+  calibrateAdc:   (symbol)         => ipcRenderer.invoke('adc:calibrate', { symbol }),
+  getAdcDistance: (symbol, price)  => ipcRenderer.invoke('adc:get-distance', { symbol, price }),
 
-  onAdcSignal:     (cb) => { ipcRenderer.on('adc-signal',      (_, d) => cb(d)); },
-  onAdcWarmupDone: (cb) => { ipcRenderer.on('adc-warmup-done', (_, d) => cb(d)); },
-  offAdcSignal:    ()   => { ipcRenderer.removeAllListeners('adc-signal'); },
-  offAdcWarmupDone:()   => { ipcRenderer.removeAllListeners('adc-warmup-done'); },
+  onAdcSignal:      (cb) => { ipcRenderer.on('adc-signal',           (_, d) => cb(d)); },
+  onAdcWarmupDone:  (cb) => { ipcRenderer.on('adc-warmup-done',      (_, d) => cb(d)); },
+  onAdcDistance:    (cb) => { ipcRenderer.on('adc-distance',         (_, d) => cb(d)); },
+  onStartSound:     (cb) => { ipcRenderer.on('start-persistent-sound', (_, d) => cb(d)); },
+  onStopSound:      (cb) => { ipcRenderer.on('stop-persistent-sound',  ()    => cb()); },
+
+  offAdcSignal:     ()   => { ipcRenderer.removeAllListeners('adc-signal'); },
+  offAdcWarmupDone: ()   => { ipcRenderer.removeAllListeners('adc-warmup-done'); },
+  offAdcDistance:   ()   => { ipcRenderer.removeAllListeners('adc-distance'); },
+  offStartSound:    ()   => { ipcRenderer.removeAllListeners('start-persistent-sound'); },
+  offStopSound:     ()   => { ipcRenderer.removeAllListeners('stop-persistent-sound'); },
 });
