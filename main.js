@@ -106,61 +106,44 @@ function makeTick(symbol, price, change24h, volume, high24h, low24h, source) {
   };
 }
 
-const BINANCE_PRICE_BASE = [
-  'https://api.binance.com/api/v3/ticker/price?symbol=',
-  'https://data.binance.com/api/v3/ticker/price?symbol=',
-  'https://api.binance.us/api/v3/ticker/price?symbol=',
+// Use Binance 24hr ticker which returns BOTH live price and stats in one call
+// This eliminates the price/stats desync issue
+const BINANCE_TICKER_BASE = [
+  'https://api.binance.com/api/v3/ticker/24hr',
+  'https://data.binance.com/api/v3/ticker/24hr',
+  'https://api.binance.us/api/v3/ticker/24hr',
 ];
-const BINANCE_STATS_BASE = [
-  'https://api.binance.com/api/v3/ticker/24hr?symbol=',
-  'https://data.binance.com/api/v3/ticker/24hr?symbol=',
-  'https://api.binance.us/api/v3/ticker/24hr?symbol=',
-];
+
 const BINANCE_KLINE_BASE = [
   'https://api.binance.com/api/v3/klines',
   'https://data.binance.com/api/v3/klines',
   'https://api.binance.us/api/v3/klines',
 ];
 
-const statsCache = {};
-const STATS_TTL  = 30000;
-
-async function getStats(symbol) {
-  const now = Date.now();
-  if (statsCache[symbol] && now - statsCache[symbol].ts < STATS_TTL) {
-    return statsCache[symbol].data;
-  }
-  for (const base of BINANCE_STATS_BASE) {
+// Single call returns both price and stats, no desync possible
+async function fetchBinanceTicker24hr(symbol) {
+  let lastErr;
+  for (const base of BINANCE_TICKER_BASE) {
     try {
-      const raw = await netGet(base + symbol, 8000);
-      if (raw && raw.lastPrice) { statsCache[symbol] = { ts: now, data: raw }; return raw; }
-    } catch (_) {}
+      const raw = await netGet(`${base}?symbol=${symbol}`, 6000);
+      if (raw && raw.lastPrice) {
+        return makeTick(
+          symbol,
+          raw.lastPrice,
+          raw.priceChangePercent,
+          raw.volume,
+          raw.highPrice,
+          raw.lowPrice,
+          'Binance'
+        );
+      }
+    } catch (err) { lastErr = err; }
   }
-  return statsCache[symbol]?.data || null;
-}
-
-async function fetchOneBinance(symbol) {
-  let livePrice = null;
-  for (const base of BINANCE_PRICE_BASE) {
-    try {
-      const raw = await netGet(base + symbol, 6000);
-      if (raw && raw.price) { livePrice = parseFloat(raw.price); break; }
-    } catch (_) {}
-  }
-  const stats = await getStats(symbol);
-  if (!stats && livePrice === null) return null;
-
-  const price     = livePrice !== null ? livePrice : parseFloat(stats?.lastPrice || 0);
-  const change24h = parseFloat(stats?.priceChangePercent || 0);
-  const volume    = parseFloat(stats?.volume             || 0);
-  const high24h   = parseFloat(stats?.highPrice          || 0);
-  const low24h    = parseFloat(stats?.lowPrice           || 0);
-
-  return makeTick(symbol, price, change24h, volume, high24h, low24h, 'Binance');
+  throw lastErr || new Error('Binance fetch failed');
 }
 
 async function fetchViaBinance(symbols) {
-  const results = await Promise.allSettled(symbols.map(fetchOneBinance));
+  const results = await Promise.allSettled(symbols.map(fetchBinanceTicker24hr));
   return results.filter(r => r.status === 'fulfilled' && r.value).map(r => r.value);
 }
 
@@ -272,7 +255,6 @@ function adcGetState(symbol) {
       prevTendencia: null, prevATR: null,
       warmUpDone: false, warmUpInProgress: false,
       lastCandleTime: null, lastLongMs: 0, lastShortMs: 0,
-      // ADC line values for distance calculation
       currentArriba: null, currentAbajo: null, currentTendencia: null,
     });
   }
@@ -316,7 +298,6 @@ function adcProcessCandle(candle, state) {
   state.prevTendencia = tendencia;
   state.prevATR = atr;
 
-  // Store current ADC line values for distance calculation
   state.currentArriba = arriba;
   state.currentAbajo = abajo;
   state.currentTendencia = tendencia;
@@ -324,27 +305,25 @@ function adcProcessCandle(candle, state) {
   return { tendencia, senialCompra, senialVenta, arriba, abajo };
 }
 
-// Calculate percentage distance from current price to ADC line
+// Calculate percentage distance from current live price to ADC line
 function calcAdcDistance(price, state) {
-  if (!state.warmUpDone || price <= 0) return null;
-  
+  if (!state.warmUpDone || !price || price <= 0) return null;
+
   let adcLine = null;
   if (state.currentTendencia === 1 && state.currentArriba !== null) {
-    // Uptrend: ADC line is below price (arriba = support line)
     adcLine = state.currentArriba;
   } else if (state.currentTendencia === -1 && state.currentAbajo !== null) {
-    // Downtrend: ADC line is above price (abajo = resistance line)
     adcLine = state.currentAbajo;
   }
-  
-  if (adcLine === null) return null;
-  
+
+  if (adcLine === null || adcLine <= 0) return null;
+
+  // Distance: positive = price above ADC line, negative = price below ADC line
   const distance = ((price - adcLine) / adcLine) * 100;
   return {
     distancePct: parseFloat(distance.toFixed(3)),
     adcLine: parseFloat(adcLine.toFixed(8)),
     trend: state.currentTendencia === 1 ? 'LONG' : 'SHORT',
-    // positive = price above line, negative = price below line
   };
 }
 
@@ -399,14 +378,16 @@ async function adcWarmUp(symbol) {
 async function adcEvaluateTick(symbol, currentPrice) {
   const state = adcGetState(symbol);
   if (!state.warmUpDone) return;
+
   try {
     const candles    = await adcFetchKlines(symbol, 3);
     const closed     = candles.filter(c => c.isClosed);
     if (!closed.length) return;
     const lastClosed = closed[closed.length - 1];
+
     if (state.lastCandleTime !== null && lastClosed.time <= state.lastCandleTime) {
-      // Even if no new candle, recalculate distance with current live price
-      if (currentPrice && state.warmUpDone) {
+      // No new candle, but still send distance update with the CURRENT live price
+      if (currentPrice && currentPrice > 0 && state.warmUpDone) {
         const distInfo = calcAdcDistance(currentPrice, state);
         if (distInfo && mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('adc-distance', { symbol, ...distInfo, price: currentPrice });
@@ -418,8 +399,8 @@ async function adcEvaluateTick(symbol, currentPrice) {
     const result = adcProcessCandle(lastClosed, state);
     state.lastCandleTime = lastClosed.time;
 
-    // Send distance update with live price
-    const priceForDist = currentPrice || lastClosed.close;
+    // Always use the live price (currentPrice) for distance, not the closed candle close
+    const priceForDist = (currentPrice && currentPrice > 0) ? currentPrice : lastClosed.close;
     const distInfo = calcAdcDistance(priceForDist, state);
     if (distInfo && mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('adc-distance', { symbol, ...distInfo, price: priceForDist });
@@ -435,18 +416,14 @@ async function adcEvaluateTick(symbol, currentPrice) {
       adcFireAlert(symbol, 'SHORT', lastClosed.close);
     }
   } catch (err) {
+    // On kline fetch error, still send distance with live price if we have ADC state
+    if (currentPrice && currentPrice > 0 && state.warmUpDone) {
+      const distInfo = calcAdcDistance(currentPrice, state);
+      if (distInfo && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('adc-distance', { symbol, ...distInfo, price: currentPrice });
+      }
+    }
     log('WARN', `[ADC] Error ${symbol}`, { error: err.message });
-  }
-}
-
-// Send live price distance updates periodically (between candle closes)
-async function adcSendDistanceUpdate(symbol, currentPrice) {
-  const state = adcGetState(symbol);
-  if (!state.warmUpDone || !currentPrice) return;
-  
-  const distInfo = calcAdcDistance(currentPrice, state);
-  if (distInfo && mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('adc-distance', { symbol, ...distInfo, price: currentPrice });
   }
 }
 
@@ -486,7 +463,6 @@ function adcFireAlert(symbol, type, price) {
     n.show();
   }
 
-  // Show persistent alert window
   showPersistentAlert(symbol, type, price, fullBody);
 
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -503,7 +479,6 @@ function adcFireAlert(symbol, type, price) {
 let alertWindow = null;
 
 function showPersistentAlert(symbol, type, price, body) {
-  // Close previous alert if any
   if (alertWindow && !alertWindow.isDestroyed()) {
     alertWindow.close();
     alertWindow = null;
@@ -643,7 +618,6 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
     if (alertWindow && !alertWindow.isDestroyed()) {
       alertWindow.show();
       alertWindow.focus();
-      // Send sound trigger to main window for persistent beeping
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('start-persistent-sound', { type, symbol, price });
       }
@@ -651,7 +625,6 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
   });
   alertWindow.on('closed', () => {
     alertWindow = null;
-    // Stop persistent sound when alert window is closed
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('stop-persistent-sound');
     }
@@ -736,7 +709,18 @@ ipcMain.handle('app:version', () => CURRENT_VERSION);
 
 ipcMain.handle('tickers:fetch', async (_, { symbols, provider }) => {
   const ticks = await fetchAllTickers(symbols, provider);
+  // For each ticker, immediately send ADC distance update with the fresh live price
+  // then evaluate for new candles in background
   for (const tick of ticks) {
+    // Send distance update immediately with live price (no kline fetch needed)
+    const state = adcGetState(tick.symbol);
+    if (state.warmUpDone && tick.price > 0) {
+      const distInfo = calcAdcDistance(tick.price, state);
+      if (distInfo && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('adc-distance', { symbol: tick.symbol, ...distInfo, price: tick.price });
+      }
+    }
+    // Background: check for new candles and potential signals
     setImmediate(() =>
       adcEvaluateTick(tick.symbol, tick.price).catch(err =>
         log('WARN', `[ADC] bg error ${tick.symbol}`, { error: err.message })
