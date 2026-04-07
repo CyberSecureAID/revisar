@@ -1,0 +1,1688 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy"
+  content="default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net https://raw.githubusercontent.com; img-src * data:;">
+<title>Sniper Alert</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0d16; --bg2:#0f1320; --bg3:#151a2a;
+  --border:rgba(255,255,255,0.08); --border2:rgba(255,255,255,0.14);
+  --cyan:#00d9ff; --cyan-dim:rgba(0,217,255,0.12);
+  --violet:#7c3aed;
+  --emerald:#00e5a0; --em-dim:rgba(0,229,160,0.12);
+  --rose:#ff3860;   --rose-dim:rgba(255,56,96,0.12);
+  --amber:#f59e0b;  --amber-dim:rgba(245,158,11,0.12);
+  --t1:#eef0f6; --t2:#7a7d9a; --t3:#454862;
+  --sans:'Inter',sans-serif; --mono:'JetBrains Mono',monospace;
+  --r-sm:6px; --r-md:11px; --r-lg:16px;
+  --ease:0.16s cubic-bezier(0.4,0,0.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:var(--sans);color:var(--t1);
+  -webkit-font-smoothing:antialiased;background:var(--bg);border-radius:12px;}
+button{font-family:var(--sans);cursor:pointer}
+input{font-family:var(--mono)}
+
+#app{
+  height:100vh;
+  display:grid;
+  grid-template-rows:44px 38px 1fr 28px 42px;
+  background:var(--bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;
+  -webkit-mask-image:-webkit-radial-gradient(white,black);
+}
+
+/* ── HEADER ── */
+header{
+  -webkit-app-region:drag;grid-row:1;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 14px;border-bottom:1px solid var(--border);background:var(--bg2);
+}
+.brand{display:flex;align-items:center;gap:0}
+
+/* Iridescent animated brand name — no icon */
+.brand-name{
+  font-size:13px;font-weight:800;letter-spacing:.6px;
+  background:linear-gradient(
+    90deg,
+    #00d9ff 0%, #7c3aed 18%, #ff3860 36%,
+    #f59e0b 54%, #00e5a0 72%, #00d9ff 90%
+  );
+  background-size:200% auto;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  animation:iridescent 4s linear infinite;
+}
+@keyframes iridescent{
+  0%{background-position:0% center}
+  100%{background-position:200% center}
+}
+
+.hdr-right{-webkit-app-region:no-drag;display:flex;align-items:center;gap:6px}
+.hdr-btn{
+  background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--t2);
+  padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;
+  transition:background var(--ease),color var(--ease),border-color var(--ease);
+  display:flex;align-items:center;gap:4px;white-space:nowrap;
+}
+.hdr-btn:hover{background:var(--cyan-dim);border-color:var(--cyan);color:var(--cyan)}
+.hdr-btn .dot{width:5px;height:5px;border-radius:50%;background:var(--rose);display:none;flex-shrink:0}
+.hdr-btn .dot.vis{display:block}
+.win-btn{width:20px;height:20px;border-radius:50%;border:none;display:flex;
+  align-items:center;justify-content:center;font-size:10px;font-weight:700;
+  transition:filter var(--ease),transform var(--ease)}
+.win-btn.min{background:rgba(245,158,11,.2);color:var(--amber)}
+.win-btn.max{background:rgba(0,217,255,.12);color:var(--cyan)}
+.win-btn.cls{background:rgba(255,56,96,.2);color:var(--rose)}
+.win-btn:hover{filter:brightness(1.5);transform:scale(1.12)}
+
+/* ── PROVIDER STRIP ── */
+#provider-strip{
+  grid-row:2;display:flex;align-items:center;gap:6px;padding:0 10px;
+  border-bottom:1px solid var(--border);background:var(--bg2);
+  overflow-x:auto;scrollbar-width:none;flex-shrink:0;
+}
+#provider-strip::-webkit-scrollbar{display:none}
+
+.refresh-strip-btn{
+  display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;
+  border:1px solid var(--border);background:rgba(255,255,255,0.04);
+  color:var(--t2);font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;
+  transition:background var(--ease),color var(--ease),border-color var(--ease);
+}
+.refresh-strip-btn:hover{background:var(--em-dim);border-color:var(--emerald);color:var(--emerald)}
+.refresh-strip-btn.spinning .refresh-icon{display:inline-block;animation:spinOnce .5s linear}
+@keyframes spinOnce{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.strip-sep{width:1px;height:16px;background:var(--border);flex-shrink:0;margin:0 2px}
+
+.prov-chip{
+  display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;
+  border:1px solid var(--border);background:rgba(255,255,255,0.03);
+  cursor:pointer;transition:background var(--ease),border-color var(--ease);
+  white-space:nowrap;flex-shrink:0;font-size:10px;font-weight:600;color:var(--t2);
+}
+.prov-chip:hover{background:rgba(255,255,255,0.07);border-color:var(--border2)}
+.prov-chip.active{background:var(--cyan-dim);border-color:var(--cyan);color:var(--cyan)}
+.prov-chip .prov-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--t3)}
+.prov-chip.active .prov-dot{background:var(--cyan);box-shadow:0 0 5px var(--cyan)}
+
+/* ── COIN LIST ── */
+#coin-list{grid-row:3;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:7px}
+#coin-list::-webkit-scrollbar{width:4px}
+#coin-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px}
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:10px;color:var(--t3);font-size:12px;padding:30px 20px;text-align:center}
+.e-icon{font-size:28px;opacity:.4}
+
+/* ── SWIPE WRAPPER ── */
+.swipe-wrapper{position:relative;overflow:hidden;border-radius:var(--r-md);flex-shrink:0}
+.swipe-delete-bg{
+  position:absolute;top:0;right:0;bottom:0;width:80px;
+  background:linear-gradient(135deg,#c0392b,var(--rose));
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;
+  border-radius:var(--r-md);pointer-events:none;opacity:0;transition:opacity .15s ease;
+}
+.swipe-delete-bg.visible{opacity:1}
+.swipe-delete-bg .del-icon{font-size:18px}
+.swipe-delete-bg .del-label{font-size:9px;font-weight:700;color:#fff;letter-spacing:.5px;text-transform:uppercase}
+
+/* ── COIN CARD ── */
+.coin-card{
+  background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:var(--r-md);
+  padding:10px 12px 0 12px;display:flex;flex-direction:column;cursor:pointer;
+  transition:background var(--ease),border-color var(--ease);
+  animation:cardIn .25s ease both;overflow:hidden;
+  transform:translateX(0);will-change:transform;position:relative;z-index:1;
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.coin-card:hover{background:rgba(255,255,255,0.06);border-color:var(--border2)}
+.coin-card.swiping{transition:none}
+.coin-card.flashing{border-color:var(--rose)!important;animation:alertFlash .7s ease infinite!important}
+@keyframes alertFlash{
+  0%,100%{background:rgba(255,56,96,0.04);box-shadow:none}
+  50%{background:rgba(255,56,96,0.12);box-shadow:0 0 16px rgba(255,56,96,0.2)}
+}
+
+.coin-card-top{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding-bottom:8px}
+.coin-icon{width:30px;height:30px;border-radius:50%;object-fit:contain;
+  background:rgba(255,255,255,0.05);border:1px solid var(--border);padding:3px;flex-shrink:0}
+.coin-meta{display:flex;flex-direction:column;gap:2px;min-width:0}
+.coin-name{font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.alert-dot{width:5px;height:5px;border-radius:50%;background:var(--cyan);box-shadow:0 0 4px var(--cyan);flex-shrink:0}
+.coin-chg{font-family:var(--mono);font-size:9px;color:var(--t3)}
+.coin-chg.up{color:var(--emerald)}.coin-chg.down{color:var(--rose)}
+.coin-right{text-align:right}
+.coin-price{font-family:var(--mono);font-size:13px;font-weight:600;white-space:nowrap}
+.coin-pct{font-family:var(--mono);font-size:9px;color:var(--t3);margin-top:1px}
+.coin-pct.up{color:var(--emerald)}.coin-pct.down{color:var(--rose)}
+.coin-src{font-family:var(--mono);font-size:8px;color:var(--t3);margin-top:1px}
+
+/* ADC badge (replaces ST badge) */
+.adc-badge{
+  display:inline-flex;align-items:center;gap:3px;padding:1px 5px;border-radius:4px;
+  font-family:var(--mono);font-size:8px;font-weight:700;margin-top:1px;letter-spacing:.3px;
+}
+.adc-badge.long {background:rgba(0,229,160,0.15);color:var(--emerald);border:1px solid rgba(0,229,160,0.3)}
+.adc-badge.short{background:rgba(255,56,96,0.15);color:var(--rose);border:1px solid rgba(255,56,96,0.3)}
+.adc-badge.wait {background:rgba(245,158,11,0.10);color:var(--amber);border:1px solid rgba(245,158,11,0.2)}
+
+/* ── ANALYSIS BAR — upgraded to show continuous data activity ── */
+.analysis-bar{
+  position:relative;height:28px;
+  background:rgba(0,0,0,0.3);border-top:1px solid rgba(255,255,255,0.05);
+  overflow:hidden;display:flex;align-items:center;flex-shrink:0;
+}
+.scan-beam{
+  position:absolute;top:0;bottom:0;width:80px;
+  background:linear-gradient(90deg,transparent,rgba(0,217,255,0.14),rgba(0,217,255,0.05),transparent);
+  animation:scanSweep 2.2s linear infinite;pointer-events:none;
+}
+@keyframes scanSweep{0%{left:-80px}100%{left:calc(100% + 80px)}}
+
+/* Waveform bars — more bars, livelier */
+.wave-bars{
+  position:absolute;left:8px;top:50%;transform:translateY(-50%);
+  display:flex;align-items:flex-end;gap:1.5px;height:18px;
+}
+.wave-bar{
+  width:2px;border-radius:1px;
+  background:linear-gradient(180deg,var(--cyan),rgba(0,217,255,0.3));
+  animation:waveAnim 0.9s ease infinite;transform-origin:bottom;
+}
+.wave-bar:nth-child(1) {height:4px; animation-delay:0s}
+.wave-bar:nth-child(2) {height:10px;animation-delay:.07s}
+.wave-bar:nth-child(3) {height:16px;animation-delay:.14s}
+.wave-bar:nth-child(4) {height:8px; animation-delay:.05s}
+.wave-bar:nth-child(5) {height:14px;animation-delay:.21s}
+.wave-bar:nth-child(6) {height:6px; animation-delay:.1s}
+.wave-bar:nth-child(7) {height:12px;animation-delay:.18s}
+.wave-bar:nth-child(8) {height:4px; animation-delay:.03s}
+.wave-bar:nth-child(9) {height:9px; animation-delay:.25s}
+.wave-bar:nth-child(10){height:15px;animation-delay:.12s}
+@keyframes waveAnim{
+  0%,100%{transform:scaleY(0.3);opacity:0.4}
+  50%{transform:scaleY(1);opacity:1}
+}
+
+/* ADC status pill inside analysis bar */
+.adc-bar-status{
+  position:absolute;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:5px;pointer-events:none;
+}
+.adc-led{
+  width:5px;height:5px;border-radius:50%;flex-shrink:0;
+  background:var(--emerald);box-shadow:0 0 5px var(--emerald);
+  animation:adcLedPulse 1.4s ease infinite;
+}
+.adc-led.amber{background:var(--amber);box-shadow:0 0 5px var(--amber)}
+.adc-led.long {background:var(--emerald);box-shadow:0 0 6px var(--emerald)}
+.adc-led.short{background:var(--rose);box-shadow:0 0 6px var(--rose)}
+@keyframes adcLedPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.6)}}
+
+.adc-bar-label{
+  font-family:var(--mono);font-size:7.5px;color:var(--t2);
+  letter-spacing:1.2px;text-transform:uppercase;white-space:nowrap;
+}
+.adc-bar-label.long {color:var(--emerald)}
+.adc-bar-label.short{color:var(--rose)}
+.adc-bar-label.wait {color:var(--amber)}
+
+/* Right-side data metrics display */
+.adc-metrics{
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  display:flex;align-items:center;gap:6px;pointer-events:none;
+}
+.adc-metric-dot{
+  width:3px;height:3px;border-radius:50%;background:var(--cyan);
+  animation:metricBlink 0.6s ease infinite;
+}
+.adc-metric-dot:nth-child(2){animation-delay:.2s}
+.adc-metric-dot:nth-child(3){animation-delay:.4s}
+@keyframes metricBlink{0%,100%{opacity:.2}50%{opacity:1}}
+
+/* ── STATUS BAR ── */
+#status-bar{
+  grid-row:4;display:flex;align-items:center;justify-content:space-between;
+  padding:0 14px;border-top:1px solid var(--border);background:rgba(0,0,0,.25);
+}
+.s-pill{display:flex;align-items:center;gap:5px;font-size:9px;font-family:var(--mono);color:var(--t3)}
+.s-led{width:5px;height:5px;border-radius:50%;background:var(--emerald);box-shadow:0 0 4px var(--emerald)}
+.s-led.err{background:var(--rose);box-shadow:0 0 4px var(--rose)}
+.s-led.spin{animation:blink 1s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ── FOOTER ── */
+footer{
+  grid-row:5;display:flex;align-items:center;justify-content:space-between;
+  padding:0 14px;border-top:1px solid var(--border);background:var(--bg2);
+  position:relative;overflow:visible;z-index:20;
+}
+.footer-left{display:flex;align-items:center;gap:8px}
+.footer-brand{font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px}
+.ver-chip{
+  display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.05);
+  border:1px solid var(--border);border-radius:20px;padding:2px 8px;
+  font-family:var(--mono);font-size:9px;color:var(--t2);cursor:pointer;
+  transition:background var(--ease),border-color var(--ease),color var(--ease);
+}
+.ver-chip:hover{background:rgba(0,217,255,.1);border-color:rgba(0,217,255,.3);color:var(--cyan)}
+.upd-dot{width:5px;height:5px;border-radius:50%;background:var(--amber);box-shadow:0 0 4px var(--amber);display:none}
+.upd-dot.vis{display:block}
+.upd-btn{
+  background:transparent;border:1px solid var(--border);color:var(--t2);
+  font-size:9.5px;font-weight:500;padding:3px 9px;border-radius:20px;
+  transition:background var(--ease),border-color var(--ease),color var(--ease);
+}
+.upd-btn:hover{background:var(--cyan-dim);border-color:var(--cyan);color:var(--cyan)}
+.upd-btn.has-update{border-color:var(--amber);color:var(--amber)}
+
+#changelog-panel{
+  position:absolute;bottom:calc(100% + 5px);left:10px;right:10px;
+  background:rgba(12,15,26,.99);border:1px solid var(--border);border-radius:var(--r-md);
+  padding:14px 15px;box-shadow:0 -8px 32px rgba(0,0,0,.6);z-index:200;display:none;
+}
+#changelog-panel.open{display:block;animation:slideUp .18s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.cl-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+.cl-title{font-size:9.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.8px}
+.cl-ver{font-family:var(--mono);font-size:9px;color:var(--cyan)}
+.cl-list{list-style:none;display:flex;flex-direction:column;gap:5px}
+.cl-item{display:flex;align-items:flex-start;gap:6px;font-size:10px;color:var(--t2);line-height:1.5}
+.cl-item::before{content:'›';color:var(--cyan);font-size:12px;line-height:1.3;flex-shrink:0}
+
+/* ── FAB ── */
+#add-fab{
+  position:fixed;bottom:58px;right:16px;width:38px;height:38px;border-radius:50%;
+  background:linear-gradient(135deg,var(--cyan),var(--violet));
+  border:none;color:#fff;font-size:20px;font-weight:300;
+  box-shadow:0 4px 14px rgba(0,217,255,.35);
+  transition:transform var(--ease),box-shadow var(--ease);
+  z-index:15;display:flex;align-items:center;justify-content:center;
+}
+#add-fab:hover{transform:scale(1.12) rotate(90deg);box-shadow:0 6px 22px rgba(0,217,255,.5)}
+#add-fab:active{transform:scale(.96)}
+
+/* ── OVERLAYS ── */
+.overlay{
+  position:fixed;inset:0;background:rgba(4,6,14,.88);backdrop-filter:blur(12px);
+  display:none;align-items:center;justify-content:center;z-index:50;padding:16px;border-radius:12px;
+}
+.overlay.open{display:flex}
+.modal-box{
+  width:100%;max-width:420px;max-height:88vh;
+  background:rgba(12,15,26,.99);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:16px;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.7);animation:modalIn .2s ease;
+}
+.modal-box::-webkit-scrollbar{width:4px}
+.modal-box::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+@keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(6px)}to{opacity:1;transform:none}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.modal-title{font-size:13px;font-weight:700}
+.modal-close{
+  background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--t2);
+  width:24px;height:24px;border-radius:50%;font-size:14px;display:flex;
+  align-items:center;justify-content:center;transition:background var(--ease);
+}
+.modal-close:hover{background:var(--rose-dim);border-color:var(--rose);color:var(--rose)}
+
+.tok-hint{font-size:10px;color:var(--t3);margin-bottom:10px}
+.tok-item{
+  display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:var(--r-sm);
+  cursor:pointer;border:1px solid transparent;transition:background var(--ease),border-color var(--ease);
+}
+.tok-item:hover{background:rgba(255,255,255,.05);border-color:var(--border)}
+.tok-item.tok-available:hover{background:rgba(0,217,255,.06);border-color:rgba(0,217,255,.2)}
+.tok-item img{width:24px;height:24px;border-radius:50%;object-fit:contain;background:rgba(255,255,255,.05);padding:2px;flex-shrink:0}
+.tok-name{font-size:11.5px;font-weight:600}
+.tok-sym{font-size:9.5px;color:var(--t2);font-family:var(--mono)}
+.tok-added{font-size:9.5px;color:var(--emerald);margin-left:auto;flex-shrink:0}
+.tok-fav{margin-left:auto;background:none;border:none;font-size:13px;opacity:.3;transition:opacity var(--ease);padding:2px 4px}
+.tok-fav:hover,.tok-fav.on{opacity:1}
+.tok-add-btn{
+  margin-left:auto;flex-shrink:0;background:var(--cyan-dim);border:1px solid var(--cyan);
+  color:var(--cyan);font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;cursor:pointer;
+}
+.tok-add-btn:hover{background:rgba(0,217,255,.25)}
+
+.form-group{margin-bottom:11px}
+.form-label{display:block;font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+.form-sub{font-size:9px;color:var(--t3);font-weight:400;text-transform:none;letter-spacing:0;margin-left:5px}
+.form-input{
+  width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);
+  color:var(--t1);padding:7px 10px;border-radius:var(--r-sm);font-family:var(--mono);font-size:12px;outline:none;
+  transition:border-color var(--ease),box-shadow var(--ease);
+}
+.form-input::placeholder{color:var(--t3)}
+.form-input:focus{border-color:rgba(0,217,255,.45);box-shadow:0 0 0 3px rgba(0,217,255,.07)}
+.form-divider{font-size:9px;color:var(--t3);text-align:center;padding:3px 0 9px;text-transform:uppercase;letter-spacing:.8px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cond-tag{display:inline-flex;align-items:center;gap:3px;border-radius:5px;padding:2px 7px;font-size:9.5px;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.cond-tag.price{background:var(--cyan-dim);color:var(--cyan)}
+.cond-tag.rise{background:var(--em-dim);color:var(--emerald)}
+.cond-tag.drop{background:var(--rose-dim);color:var(--rose)}
+.hint-small{font-size:9px;margin-top:3px}
+.hint-rise{color:var(--emerald)}.hint-drop{color:var(--rose)}
+
+.btn-primary{
+  width:100%;padding:9px;background:linear-gradient(135deg,var(--cyan),var(--violet));
+  border:none;border-radius:var(--r-sm);color:#fff;font-weight:700;font-size:12px;letter-spacing:.4px;
+  transition:opacity var(--ease),transform var(--ease);
+}
+.btn-primary:hover{opacity:.88;transform:translateY(-1px)}
+.btn-danger{
+  width:100%;padding:8px;margin-top:6px;background:transparent;
+  border:1px solid rgba(255,56,96,.25);color:var(--rose);border-radius:var(--r-sm);font-size:11.5px;
+  transition:background var(--ease),border-color var(--ease);
+}
+.btn-danger:hover{background:var(--rose-dim);border-color:var(--rose)}
+
+/* ADC modal section */
+.adc-section{
+  margin-top:12px;padding:12px;
+  background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:var(--r-sm);
+}
+.adc-section-title{
+  font-size:9px;font-weight:700;color:var(--cyan);text-transform:uppercase;
+  letter-spacing:1.2px;margin-bottom:10px;display:flex;align-items:center;gap:6px;
+}
+.adc-section-led{
+  width:5px;height:5px;border-radius:50%;background:var(--cyan);
+  box-shadow:0 0 5px var(--cyan);animation:adcLedPulse 1.4s ease infinite;flex-shrink:0;
+}
+/* Activity visualization in modal */
+.adc-activity-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.adc-activity-label{font-size:10px;color:var(--t1);font-weight:500}
+.adc-activity-sub{font-size:9px;color:var(--t3);margin-top:1px}
+
+.adc-mini-wave{display:flex;align-items:flex-end;gap:2px;height:16px}
+.adc-mini-bar{width:2.5px;border-radius:1px;background:var(--cyan);animation:waveAnim 0.8s ease infinite}
+.adc-mini-bar:nth-child(1){height:5px; animation-delay:0s}
+.adc-mini-bar:nth-child(2){height:11px;animation-delay:.1s}
+.adc-mini-bar:nth-child(3){height:15px;animation-delay:.2s}
+.adc-mini-bar:nth-child(4){height:8px; animation-delay:.05s}
+.adc-mini-bar:nth-child(5){height:13px;animation-delay:.15s}
+
+.adc-status-pill{
+  display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:10px;
+  font-family:var(--mono);font-size:8px;font-weight:700;margin-top:8px;
+}
+.adc-status-pill.active{background:rgba(0,229,160,.15);color:var(--emerald);border:1px solid rgba(0,229,160,.3)}
+.adc-status-pill.inactive{background:rgba(255,255,255,.06);color:var(--t3);border:1px solid var(--border)}
+.adc-status-pill.calib{background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.adc-pill-led{width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.adc-status-pill.active .adc-pill-led{background:var(--emerald);box-shadow:0 0 4px var(--emerald);animation:adcLedPulse 2s ease infinite}
+.adc-status-pill.inactive .adc-pill-led{background:var(--t3)}
+.adc-status-pill.calib .adc-pill-led{background:var(--amber);animation:adcLedPulse 1s ease infinite}
+
+.toggle{position:relative;width:34px;height:18px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-track{position:absolute;inset:0;background:rgba(255,255,255,.1);border-radius:99px;cursor:pointer;transition:background .2s;border:1px solid var(--border)}
+.toggle input:checked+.toggle-track{background:var(--cyan);border-color:var(--cyan)}
+.toggle-track::after{content:'';position:absolute;width:12px;height:12px;background:#fff;border-radius:50%;top:2px;left:2px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.toggle input:checked+.toggle-track::after{transform:translateX(16px)}
+
+/* ── SLIDE PANELS ── */
+.slide-panel{
+  position:fixed;top:0;right:-105%;width:min(340px,100%);height:100%;
+  background:rgba(10,13,22,.99);backdrop-filter:blur(20px);
+  z-index:40;transition:right .24s cubic-bezier(0.4,0,.2,1);
+  display:flex;flex-direction:column;border-left:1px solid var(--border);
+}
+.slide-panel.open{right:0}
+.panel-head{
+  padding:13px 15px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.panel-title{font-size:13px;font-weight:700}
+.panel-close{
+  background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--t2);
+  width:24px;height:24px;border-radius:50%;font-size:14px;display:flex;
+  align-items:center;justify-content:center;transition:background var(--ease);
+}
+.panel-close:hover{background:var(--rose-dim);border-color:var(--rose);color:var(--rose)}
+
+#alerts-list{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:7px}
+#alerts-list::-webkit-scrollbar{width:3px}
+#alerts-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07);border-radius:2px}
+.alert-row{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px}
+.ar-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.ar-coin{display:flex;align-items:center;gap:7px}
+.ar-coin img{width:20px;height:20px;border-radius:50%;object-fit:contain;background:rgba(255,255,255,.05);padding:2px}
+.ar-name{font-size:11.5px;font-weight:700}
+.ar-actions{display:flex;gap:4px}
+.ar-btn{
+  background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--t2);
+  width:22px;height:22px;border-radius:5px;font-size:10px;display:flex;
+  align-items:center;justify-content:center;transition:background var(--ease);
+}
+.ar-btn:hover{background:rgba(255,255,255,.08);color:var(--t1)}
+.ar-btn.del:hover{background:var(--rose-dim);border-color:var(--rose);color:var(--rose)}
+.ar-btn.muted{color:var(--amber);border-color:var(--amber)}
+.cond-chips{display:flex;flex-wrap:wrap;gap:4px}
+.cond-chip{font-size:9px;font-family:var(--mono);padding:2px 7px;border-radius:5px;font-weight:500}
+.cond-chip.price{background:var(--cyan-dim);color:var(--cyan)}
+.cond-chip.rise{background:var(--em-dim);color:var(--emerald)}
+.cond-chip.drop{background:var(--rose-dim);color:var(--rose)}
+.alert-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--t3);font-size:11px;text-align:center;padding:20px}
+
+/* Settings panel */
+#settings-body{flex:1;overflow-y:auto;padding:10px 14px}
+.s-section{margin-bottom:16px}
+.s-sec-title{font-size:9px;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:1px;margin-bottom:9px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.s-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.s-row:last-child{border-bottom:none}
+.s-info{flex:1}
+.s-label{font-size:11px;color:var(--t1);font-weight:500}
+.s-sub{font-size:9px;color:var(--t3);margin-top:1px}
+.s-sel{
+  background:rgba(0,0,0,.4);border:1px solid var(--border);color:var(--t1);
+  padding:4px 8px;border-radius:6px;font-size:10px;font-family:var(--sans);
+  outline:none;cursor:pointer;min-width:85px;
+}
+.s-sel:focus{border-color:rgba(0,217,255,.4)}
+
+/* ADC activity card in settings — shows live processing feel */
+.adc-settings-card{
+  background:rgba(0,0,0,.2);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:12px;margin-bottom:8px;
+}
+.adc-settings-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.adc-settings-title{font-size:11px;font-weight:700;color:var(--t1);display:flex;align-items:center;gap:7px}
+.adc-global-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  font-family:var(--mono);font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;
+}
+.adc-global-badge.on{background:rgba(0,229,160,.12);color:var(--emerald);border:1px solid rgba(0,229,160,.25)}
+.adc-global-badge.off{background:rgba(255,255,255,.05);color:var(--t3);border:1px solid var(--border)}
+.adc-global-led{width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.adc-global-badge.on .adc-global-led{background:var(--emerald);box-shadow:0 0 4px var(--emerald);animation:adcLedPulse 2s ease infinite}
+.adc-global-badge.off .adc-global-led{background:var(--t3)}
+
+/* Live data activity grid */
+.adc-data-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.adc-data-cell{
+  background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.05);border-radius:6px;
+  padding:6px 8px;
+}
+.adc-data-key{font-family:var(--mono);font-size:7.5px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px}
+.adc-data-val{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--cyan)}
+.adc-data-val.green{color:var(--emerald)}
+.adc-data-val.amber{color:var(--amber)}
+
+/* Coin status grid */
+.adc-coin-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px}
+.adc-coin-item{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:5px;padding:5px 7px}
+.adc-coin-sym{font-size:8px;font-family:var(--mono);color:var(--t2);margin-bottom:2px}
+.adc-coin-state{font-size:8px;font-family:var(--mono);font-weight:700}
+.adc-coin-state.done{color:var(--emerald)}
+.adc-coin-state.pending{color:var(--amber)}
+
+/* Provider cards */
+.sprov-card{
+  display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r-md);
+  border:1px solid var(--border);cursor:pointer;margin-bottom:5px;
+  transition:background var(--ease),border-color var(--ease);
+}
+.sprov-card:hover{background:rgba(255,255,255,.05)}
+.sprov-card.active{background:var(--cyan-dim);border-color:var(--cyan)}
+.sprov-logo{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;flex-shrink:0}
+.sprov-info{flex:1}
+.sprov-name{font-size:11px;font-weight:600}
+.sprov-desc{font-size:9px;color:var(--t3);margin-top:1px;line-height:1.4}
+.sprov-tag{font-size:8px;padding:1px 5px;border-radius:4px;font-weight:700;text-transform:uppercase;flex-shrink:0}
+.tag-green{background:var(--em-dim);color:var(--emerald)}
+.tag-amber{background:var(--amber-dim);color:var(--amber)}
+.tag-cyan{background:var(--cyan-dim);color:var(--cyan)}
+
+/* Hidden in-app banner — all alerts go OS-only */
+#adc-banner{display:none!important}
+
+/* TOASTS */
+#toast-zone{position:fixed;top:54px;left:10px;right:10px;z-index:100;display:flex;flex-direction:column;gap:5px;pointer-events:none}
+.toast{
+  background:rgba(12,15,26,.98);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:8px 11px;font-size:11px;color:var(--t1);display:flex;align-items:center;gap:7px;
+  box-shadow:0 2px 12px rgba(0,0,0,.4);animation:toastIn .18s ease forwards;pointer-events:all;
+}
+.toast.success{border-left:3px solid var(--emerald)}
+.toast.error  {border-left:3px solid var(--rose)}
+.toast.info   {border-left:3px solid var(--cyan)}
+.toast.warn   {border-left:3px solid var(--amber)}
+@keyframes toastIn{from{opacity:0;transform:translateY(-5px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes toastOut{to{opacity:0;transform:translateY(-4px) scale(.97)}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="brand">
+      <span class="brand-name">Sniper Alert</span>
+    </div>
+    <div class="hdr-right">
+      <button class="hdr-btn" onclick="UI.openAlertsPanel()">🔔 Alertas <span class="dot" id="alerts-dot"></span></button>
+      <button class="hdr-btn" onclick="window.sniperAPI.openAdmin()">⚙️ Admin</button>
+      <button class="hdr-btn" onclick="UI.openSettingsPanel()">⚙️</button>
+      <button class="win-btn min" onclick="window.sniperAPI.minimizeWindow()" title="Minimizar">−</button>
+      <button class="win-btn max" onclick="window.sniperAPI.maximizeWindow()" title="Maximizar">□</button>
+      <button class="win-btn cls" onclick="window.sniperAPI.closeWindow()" title="Cerrar">×</button>
+    </div>
+  </header>
+
+  <div id="provider-strip">
+    <button class="refresh-strip-btn" id="refresh-strip-btn" onclick="UI.manualRefresh()" title="Actualizar precios">
+      <span class="refresh-icon">↺</span> Actualizar
+    </button>
+    <div class="strip-sep"></div>
+  </div>
+
+  <div id="coin-list">
+    <div class="empty-state" id="loading-state"><div class="e-icon">⏳</div><span>Obteniendo precios…</span></div>
+  </div>
+
+  <div id="status-bar">
+    <div class="s-pill"><div class="s-led spin" id="s-led"></div><span id="s-text">Conectando…</span></div>
+    <div class="s-pill" id="s-source"></div>
+  </div>
+
+  <footer>
+    <div class="footer-left">
+      <span class="footer-brand">Sniper Alert</span>
+      <button class="ver-chip" id="ver-chip" onclick="UI.toggleChangelog()">
+        <span id="ver-label">v—</span><span class="upd-dot" id="upd-dot"></span>
+      </button>
+    </div>
+    <button class="upd-btn" id="upd-btn" onclick="App.checkUpdate()">Buscar actualizaciones</button>
+    <div id="changelog-panel">
+      <div class="cl-head"><span class="cl-title">Esta versión</span><span class="cl-ver" id="cl-ver"></span></div>
+      <ul class="cl-list" id="cl-list"></ul>
+    </div>
+  </footer>
+</div>
+
+<button id="add-fab" onclick="UI.openAddModal()" title="Agregar moneda">+</button>
+<div id="adc-banner"></div>
+<div id="toast-zone"></div>
+
+<!-- PANEL: ALERTAS -->
+<div id="panel-alerts" class="slide-panel">
+  <div class="panel-head"><span class="panel-title">Alertas activas</span><button class="panel-close" onclick="UI.closeAlertsPanel()">×</button></div>
+  <div id="alerts-list"></div>
+</div>
+
+<!-- PANEL: SETTINGS -->
+<div id="panel-settings" class="slide-panel">
+  <div class="panel-head"><span class="panel-title">Configuración</span><button class="panel-close" onclick="UI.closeSettingsPanel()">×</button></div>
+  <div id="settings-body">
+
+    <!-- ADC section — activity view, no internal params -->
+    <div class="s-section">
+      <div class="s-sec-title">⚡ Algoritmo de Detección de Ciclos</div>
+      <div class="adc-settings-card">
+        <div class="adc-settings-header">
+          <div class="adc-settings-title">
+            <div class="adc-section-led"></div>
+            Motor ADC
+          </div>
+          <div class="adc-global-badge on" id="adc-global-badge">
+            <div class="adc-global-led"></div>
+            <span id="adc-global-text">ACTIVO</span>
+          </div>
+        </div>
+
+        <!-- Toggle -->
+        <div class="s-row" style="padding:4px 0;border-bottom:none;margin-bottom:10px">
+          <div class="s-info">
+            <div class="s-label">Algoritmo habilitado</div>
+            <div class="s-sub">Genera señales de cambio de ciclo en tiempo real</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="cfg-adc-enabled" onchange="App.setADCEnabled(this.checked)"><span class="toggle-track"></span></label>
+        </div>
+
+        <!-- Live data activity grid -->
+        <div class="adc-data-grid">
+          <div class="adc-data-cell"><div class="adc-data-key">ESTADO</div><div class="adc-data-val green" id="adc-status-val">PROCESANDO</div></div>
+          <div class="adc-data-cell"><div class="adc-data-key">CICLOS DETECTADOS</div><div class="adc-data-val" id="adc-cycles-val">0</div></div>
+          <div class="adc-data-cell"><div class="adc-data-key">TIMEFRAME</div><div class="adc-data-val">15m</div></div>
+          <div class="adc-data-cell"><div class="adc-data-key">FUENTE</div><div class="adc-data-val">Binance Spot</div></div>
+        </div>
+
+        <!-- Per-coin status -->
+        <div style="font-size:8px;color:var(--t3);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">Estado por moneda</div>
+        <div class="adc-coin-grid" id="adc-coin-grid">
+          <div style="font-size:8px;color:var(--t3);grid-column:1/-1;text-align:center;padding:8px">Agrega monedas para ver el estado</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="s-section">
+      <div class="s-sec-title">📡 Proveedor de precios</div>
+      <div id="cfg-providers"></div>
+    </div>
+
+    <div class="s-section">
+      <div class="s-sec-title">🔔 Alertas y sonido</div>
+      <div class="s-row">
+        <div class="s-info"><div class="s-label">Repeticiones de alarma</div><div class="s-sub">Cuántas veces suena al disparar</div></div>
+        <select class="s-sel" id="cfg-repeat" onchange="App.setSetting('alarmRepeat',parseInt(this.value))">
+          <option value="1">1 vez</option>
+          <option value="3">3 veces</option>
+          <option value="5">5 veces</option>
+          <option value="0">Continua</option>
+        </select>
+      </div>
+      <div class="s-row">
+        <div class="s-info"><div class="s-label">Sonido de alerta</div></div>
+        <label class="toggle"><input type="checkbox" id="cfg-sound" onchange="App.setSetting('soundEnabled',this.checked)"><span class="toggle-track"></span></label>
+      </div>
+    </div>
+
+    <div class="s-section">
+      <div class="s-sec-title">⚙️ General</div>
+      <div class="s-row">
+        <div class="s-info"><div class="s-label">Idioma</div></div>
+        <select class="s-sel" id="cfg-lang" onchange="App.setSetting('language',this.value)">
+          <option value="es">Español</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+      <div class="s-row">
+        <div class="s-info"><div class="s-label">Intervalo de actualización</div></div>
+        <select class="s-sel" id="cfg-interval" onchange="App.setSetting('refreshInterval',parseInt(this.value))">
+          <option value="3000">3 seg</option>
+          <option value="5000">5 seg</option>
+          <option value="10000">10 seg</option>
+          <option value="15000">15 seg</option>
+          <option value="30000">30 seg</option>
+        </select>
+      </div>
+      <div class="s-row">
+        <div class="s-info"><div class="s-label">Siempre encima</div></div>
+        <label class="toggle"><input type="checkbox" id="cfg-top" onchange="App.setAlwaysOnTop(this.checked)"><span class="toggle-track"></span></label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD COIN -->
+<div class="overlay" id="modal-add">
+  <div class="modal-box">
+    <div class="modal-head"><span class="modal-title">Agregar moneda</span><button class="modal-close" onclick="UI.closeModals()">×</button></div>
+    <div class="tok-hint">Toca "+" para añadir una moneda al dashboard</div>
+    <div id="tokens-list"></div>
+  </div>
+</div>
+
+<!-- MODAL: ALERT CONFIG -->
+<div class="overlay" id="modal-alert">
+  <div class="modal-box">
+    <div class="modal-head"><span class="modal-title" id="alert-modal-title">Configurar alerta</span><button class="modal-close" onclick="UI.closeModals()">×</button></div>
+    <div class="form-group">
+      <span class="cond-tag price">💵 Precio objetivo</span>
+      <label class="form-label">Cuando el precio llegue a ($) <span class="form-sub">— 0 para desactivar</span></label>
+      <input class="form-input" type="number" id="input-price" placeholder="ej: 70000" min="0" step="any">
+    </div>
+    <div class="form-divider">— Cambio en 24 horas —</div>
+    <div class="form-row">
+      <div class="form-group">
+        <span class="cond-tag rise">📈 Subida</span>
+        <label class="form-label">Sube este %</label>
+        <input class="form-input" type="number" id="input-rise" placeholder="ej: 5" min="0" step="any">
+        <div class="hint-small hint-rise">Ej: 5 → alerta si sube +5%</div>
+      </div>
+      <div class="form-group">
+        <span class="cond-tag drop">📉 Bajada</span>
+        <label class="form-label">Baja este %</label>
+        <input class="form-input" type="number" id="input-drop" placeholder="ej: 5" min="0" step="any">
+        <div class="hint-small hint-drop">Ej: 5 → alerta si baja −5%</div>
+      </div>
+    </div>
+
+    <!-- ADC section in modal — activity view -->
+    <div class="adc-section">
+      <div class="adc-section-title"><div class="adc-section-led"></div>Algoritmo de Detección de Ciclos — <span id="adc-modal-sym" style="color:var(--t1)">—</span></div>
+      <div class="adc-activity-row">
+        <div>
+          <div class="adc-activity-label">Activar señales de ciclo</div>
+          <div class="adc-activity-sub">Genera alertas OS al detectar cambio de fase</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="input-adc-enabled" onchange="UI.updateADCModalStatus()"><span class="toggle-track"></span></label>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+        <div class="adc-status-pill inactive" id="adc-modal-pill">
+          <div class="adc-pill-led"></div><span id="adc-modal-pill-text">DESACTIVADO</span>
+        </div>
+        <div class="adc-mini-wave" id="adc-modal-wave" style="display:none">
+          <div class="adc-mini-bar"></div><div class="adc-mini-bar"></div>
+          <div class="adc-mini-bar"></div><div class="adc-mini-bar"></div>
+          <div class="adc-mini-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="UI.saveAlert()">Guardar alerta</button>
+    <button class="btn-danger" id="btn-remove-coin" onclick="UI.removeCoin()">Eliminar moneda del dashboard</button>
+  </div>
+</div>
+
+<!-- MODULE 1 — ALERT ENGINE -->
+<script>
+'use strict';
+class BaseAlertPlugin {
+  get id()    { throw new Error('id required'); }
+  get name()  { throw new Error('name required'); }
+  evaluate()  { throw new Error('evaluate required'); }
+  defaultConfig() { return {}; }
+}
+class PriceTargetPlugin extends BaseAlertPlugin {
+  get id()   { return 'price_target'; }
+  get name() { return 'Precio Objetivo'; }
+  defaultConfig() { return { price: 0 }; }
+  evaluate(tick, d) {
+    if (!d || d.price <= 0) return { triggered: false };
+    const ok = tick.price >= d.price;
+    return { triggered: ok, message: ok ? `${tick.symbol} alcanzó $${d.price.toLocaleString()} — ahora $${tick.price.toLocaleString()}` : null };
+  }
+}
+class PercentRisePlugin extends BaseAlertPlugin {
+  get id()   { return 'percent_rise'; }
+  get name() { return 'Subida %'; }
+  defaultConfig() { return { rise: 0 }; }
+  evaluate(tick, d) {
+    if (!d || d.rise <= 0) return { triggered: false };
+    const ok = tick.change24h >= d.rise;
+    return { triggered: ok, message: ok ? `${tick.symbol} subió +${tick.change24h.toFixed(2)}% (objetivo: +${d.rise}%)` : null };
+  }
+}
+class PercentDropPlugin extends BaseAlertPlugin {
+  get id()   { return 'percent_drop'; }
+  get name() { return 'Bajada %'; }
+  defaultConfig() { return { drop: 0 }; }
+  evaluate(tick, d) {
+    if (!d || d.drop <= 0) return { triggered: false };
+    const ok = tick.change24h <= -Math.abs(d.drop);
+    return { triggered: ok, message: ok ? `${tick.symbol} bajó ${tick.change24h.toFixed(2)}% (objetivo: −${d.drop}%)` : null };
+  }
+}
+class AlertEngine {
+  constructor() {
+    this._p = new Map();
+    [new PriceTargetPlugin(), new PercentRisePlugin(), new PercentDropPlugin()]
+      .forEach(p => this._p.set(p.id, p));
+  }
+  evaluate(tick, cfg = {}) {
+    const res = [];
+    for (const [id, p] of this._p) {
+      try { res.push({ pluginId: id, ...p.evaluate(tick, cfg[id] || p.defaultConfig()) }); }
+      catch (_) {}
+    }
+    return res;
+  }
+  defaultAlertConfig() {
+    const c = {};
+    for (const [id, p] of this._p) c[id] = p.defaultConfig();
+    return c;
+  }
+}
+const alertEngine = new AlertEngine();
+</script>
+
+<!-- MODULE 2 — NOTIFICATION MANAGER -->
+<script>
+'use strict';
+class NotificationManager {
+  constructor({ cooldownMs = 120000 } = {}) {
+    this._cd = cooldownMs; this._last = {}; this._flash = {};
+    this._muted = new Set(); this._repeat = 3; this._sound = true;
+  }
+  setRepeat(n) { this._repeat = n; }
+  setSound(v)  { this._sound  = v; }
+  mute(sym)    { this._muted.add(sym); }
+  unmute(sym)  { this._muted.delete(sym); }
+  isMuted(sym) { return this._muted.has(sym); }
+
+  async trigger(sym, pid, msg, cardEl) {
+    if (this.isMuted(sym)) return;
+    const key = `${sym}:${pid}`;
+    const now = Date.now();
+    if (now - (this._last[key] || 0) < this._cd) return;
+    this._last[key] = now;
+    // Send as OS notification only
+    await window.sniperAPI?.sendNotification({ title: `🎯 Sniper Alert — ${sym}`, body: msg });
+    if (cardEl) this._flashCard(cardEl, sym);
+    if (this._sound) this._beep(this._repeat);
+    window.sniperAPI?.log('ALERT', 'Alert triggered', { sym, pid, msg });
+  }
+  clearAll(sym) {
+    Object.keys(this._last).filter(k => k.startsWith(`${sym}:`)).forEach(k => delete this._last[k]);
+  }
+  _flashCard(el, sym) {
+    el.classList.add('flashing');
+    if (this._flash[sym]) clearTimeout(this._flash[sym]);
+    this._flash[sym] = setTimeout(() => el.classList.remove('flashing'), 30000);
+  }
+  stopFlash(sym) {
+    document.getElementById(`card-${sym}`)?.classList.remove('flashing');
+    if (this._flash[sym]) { clearTimeout(this._flash[sym]); delete this._flash[sym]; }
+  }
+  playBeep(times, freq1, freq2) { this._beep(times, freq1, freq2); }
+  _beep(times = 3, freq1 = 1047, freq2 = 880) {
+    let c = 0;
+    const inf = times === 0;
+    const one = () => {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = c % 2 === 0 ? freq1 : freq2;
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
+        osc.start(); osc.stop(ctx.currentTime + 0.3);
+        c++;
+        if (inf || c < times) setTimeout(one, 420);
+      } catch (_) {}
+    };
+    one();
+  }
+}
+window.__NotifMgr = NotificationManager;
+</script>
+
+<!-- MODULE 3 — APP BOOTSTRAP -->
+<script>
+'use strict';
+
+const TOKENS = [
+  { symbol:'BTCUSDT',   display:'Bitcoin',   ticker:'BTC'  },
+  { symbol:'ETHUSDT',   display:'Ethereum',  ticker:'ETH'  },
+  { symbol:'SOLUSDT',   display:'Solana',    ticker:'SOL'  },
+  { symbol:'BNBUSDT',   display:'BNB',       ticker:'BNB'  },
+  { symbol:'XRPUSDT',   display:'Ripple',    ticker:'XRP'  },
+  { symbol:'DOGEUSDT',  display:'Dogecoin',  ticker:'DOGE' },
+  { symbol:'ADAUSDT',   display:'Cardano',   ticker:'ADA'  },
+  { symbol:'AVAXUSDT',  display:'Avalanche', ticker:'AVAX' },
+  { symbol:'LINKUSDT',  display:'Chainlink', ticker:'LINK' },
+  { symbol:'DOTUSDT',   display:'Polkadot',  ticker:'DOT'  },
+  { symbol:'MATICUSDT', display:'Polygon',   ticker:'MATIC'},
+  { symbol:'SHIBUSDT',  display:'Shiba Inu', ticker:'SHIB' },
+];
+
+const PROVIDER_META = {
+  binance:     { name:'Binance',     color:'#f0b90b', label:'B',  tag:'tag-amber', tagLabel:'Spot',   desc:'Binance Spot — precios idénticos a TradingView' },
+  kraken:      { name:'Kraken',      color:'#5741d9', label:'K',  tag:'tag-green', tagLabel:'Global', desc:'API pública global, sin restricciones' },
+  coingecko:   { name:'CoinGecko',   color:'#8dc63f', label:'CG', tag:'tag-green', tagLabel:'Global', desc:'API pública gratuita' },
+  coinpaprika: { name:'CoinPaprika', color:'#1da1f2', label:'CP', tag:'tag-cyan',  tagLabel:'Global', desc:'API pública global' },
+};
+
+function iconUrl(t) {
+  return `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${t.toLowerCase()}.svg`;
+}
+
+const Toast = {
+  show(msg, type = 'info', dur = 3000) {
+    const c = document.getElementById('toast-zone');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`; t.textContent = msg; c.appendChild(t);
+    setTimeout(() => { t.style.animation = 'toastOut .18s ease forwards'; setTimeout(() => t.remove(), 200); }, dur);
+  }
+};
+
+let config = null, currentAlertSym = null, refreshHandle = null, providers = [];
+const notifMgr = new window.__NotifMgr({ cooldownMs: 120000 });
+const adcStatus = {};  // per-symbol: { ready, ciclo }
+let adcCyclesDetected = 0;
+
+const App = {
+  async init() {
+    config = await window.sniperAPI.loadConfig();
+    if (!config.favorites)  config.favorites = [...(config.tracked || [])];
+    if (!config.settings)   config.settings  = {};
+    config.settings.alarmRepeat    ??= 3;
+    config.settings.soundEnabled   ??= true;
+    config.settings.language       ??= 'es';
+    config.settings.provider       ??= 'binance';
+    config.settings.alwaysOnTop    ??= false;
+    config.settings.refreshInterval??= 5000;
+    config.settings.adcEnabled     ??= true;
+    config = migrateAlerts(config);
+
+    notifMgr.setRepeat(config.settings.alarmRepeat);
+    notifMgr.setSound(config.settings.soundEnabled);
+
+    const ver = await window.sniperAPI.getVersion();
+    document.getElementById('ver-label').textContent = `v${ver}`;
+
+    providers = await window.sniperAPI.getProviders();
+    UI.renderProviderStrip();
+    UI.renderSettingsProviders();
+    UI.syncSettingsControls();
+
+    try {
+      const r = await fetch('./version.json');
+      if (r.ok) {
+        const d = await r.json();
+        document.getElementById('cl-ver').textContent = `v${d.version}`;
+        document.getElementById('cl-list').innerHTML = (d.changelog || []).map(i => `<li class="cl-item">${i}</li>`).join('');
+      }
+    } catch (_) {}
+
+    // ADC signal — card flash + sound only, NO in-app banner
+    window.sniperAPI.onAdcSignal((data) => {
+      adcStatus[data.symbol] = { ready: true, ciclo: data.type === 'LONG' ? 1 : -1 };
+      adcCyclesDetected++;
+      UI.updateADCSettingsPanel();
+      if (config?.settings?.soundEnabled !== false) {
+        notifMgr.playBeep(3, data.type === 'LONG' ? 880 : 1047, data.type === 'LONG' ? 1047 : 880);
+      }
+      const card = document.getElementById(`card-${data.symbol}`);
+      if (card) {
+        card.classList.add('flashing');
+        setTimeout(() => card.classList.remove('flashing'), 8000);
+      }
+      window.sniperAPI?.log('ALERT', `[ADC] ${data.type} ${data.symbol}`, { price: data.price });
+    });
+
+    // ADC calibration complete
+    window.sniperAPI.onAdcWarmupDone((data) => {
+      const { symbol, tendencia } = data;
+      if (!adcStatus[symbol]) adcStatus[symbol] = {};
+      adcStatus[symbol].ready = true;
+      adcStatus[symbol].ciclo = tendencia;
+      UI.updateADCSettingsPanel();
+      UI._updateCardADCBadge(symbol);
+      window.sniperAPI?.log('INFO', `[ADC] calibración completa ${symbol}`);
+    });
+
+    // Poll ADC status
+    this._pollADC();
+    setInterval(() => this._pollADC(), 12000);
+
+    await this.refresh();
+    refreshHandle = setInterval(() => this.refresh(), config.settings.refreshInterval || 5000);
+    window.sniperAPI.log('INFO', 'App initialized', { provider: config.settings.provider });
+  },
+
+  async _pollADC() {
+    try {
+      const st = await window.sniperAPI.getAdcStatus();
+      Object.entries(st || {}).forEach(([sym, s]) => {
+        if (!adcStatus[sym]) adcStatus[sym] = {};
+        adcStatus[sym].ready = s.ready;
+        adcStatus[sym].ciclo = s.ciclo;
+      });
+      UI.updateADCSettingsPanel();
+    } catch (_) {}
+  },
+
+  async refresh() {
+    const toShow = (config.favorites || []).filter(s => (config.tracked || []).includes(s));
+    if (!toShow.length) {
+      document.getElementById('coin-list').innerHTML =
+        `<div class="empty-state"><div class="e-icon">🎯</div><span>Agrega una moneda con el botón +</span></div>`;
+      document.getElementById('s-led').className = 's-led';
+      document.getElementById('s-text').textContent = 'Sin monedas';
+      return;
+    }
+    document.getElementById('s-led').className = 's-led spin';
+    try {
+      const prov  = config.settings.provider || 'binance';
+      const ticks = await window.sniperAPI.fetchTickers(toShow, prov);
+      UI.renderCoins(ticks, toShow);
+      const now = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+      document.getElementById('s-text').textContent = `En vivo · ${now}`;
+      document.getElementById('s-led').className    = 's-led';
+      document.getElementById('s-source').textContent = PROVIDER_META[prov]?.name || prov;
+    } catch (err) {
+      document.getElementById('s-text').textContent = 'Error de conexión';
+      document.getElementById('s-led').className   = 's-led err';
+      window.sniperAPI.log('ERROR', 'Refresh failed', { error: err.message });
+    }
+  },
+
+  async checkUpdate() {
+    const btn = document.getElementById('upd-btn');
+    btn.textContent = 'Verificando…'; btn.disabled = true;
+    try {
+      const r = await window.sniperAPI.checkUpdate();
+      btn.disabled = false;
+      if (r.hasUpdate) {
+        document.getElementById('upd-dot').classList.add('vis');
+        btn.textContent = 'Actualización →'; btn.classList.add('has-update');
+        Toast.show(`Versión ${r.manifest.version} disponible`, 'warn', 5000);
+        btn.onclick = () => window.sniperAPI.openRelease(r.manifest?.releaseUrl);
+      } else if (r.error) {
+        Toast.show('No se pudo verificar', 'warn'); btn.textContent = 'Buscar actualizaciones';
+      } else {
+        Toast.show('Estás al día ✓', 'success'); btn.textContent = 'Al día ✓';
+        setTimeout(() => { btn.textContent = 'Buscar actualizaciones'; }, 4000);
+      }
+    } catch (_) { btn.disabled = false; btn.textContent = 'Buscar actualizaciones'; }
+  },
+
+  setProvider(id) {
+    config.settings.provider = id;
+    this.persistConfig();
+    document.querySelectorAll('.prov-chip').forEach(c => c.classList.toggle('active', c.dataset.pid === id));
+    document.querySelectorAll('.sprov-card').forEach(c => {
+      const on = c.dataset.pid === id;
+      c.classList.toggle('active', on);
+      c.style.borderColor = on ? 'var(--cyan)' : '';
+      c.style.background  = on ? 'var(--cyan-dim)' : '';
+    });
+    clearInterval(refreshHandle);
+    this.refresh().then(() => {
+      refreshHandle = setInterval(() => this.refresh(), config.settings.refreshInterval || 5000);
+    });
+    Toast.show(`Proveedor: ${PROVIDER_META[id]?.name || id}`, 'info');
+  },
+
+  setSetting(key, val) {
+    config.settings[key] = val;
+    if (key === 'alarmRepeat') notifMgr.setRepeat(val);
+    if (key === 'soundEnabled') notifMgr.setSound(val);
+    if (key === 'refreshInterval') {
+      clearInterval(refreshHandle);
+      refreshHandle = setInterval(() => this.refresh(), val);
+    }
+    this.persistConfig();
+  },
+
+  setADCEnabled(val) {
+    config.settings.adcEnabled = val;
+    this.persistConfig();
+    UI.updateADCGlobalBadge();
+    Toast.show(val ? 'ADC activado' : 'ADC desactivado', val ? 'success' : 'info');
+  },
+
+  setAlwaysOnTop(flag) {
+    config.settings.alwaysOnTop = flag;
+    window.sniperAPI.setAlwaysOnTop(flag);
+    this.persistConfig();
+  },
+
+  async persistConfig() {
+    const ok = await window.sniperAPI.saveConfig(config);
+    if (!ok) Toast.show('Error al guardar configuración', 'error');
+  }
+};
+
+const UI = {
+  async manualRefresh() {
+    const btn = document.getElementById('refresh-strip-btn');
+    if (btn) { btn.classList.add('spinning'); btn.disabled = true; setTimeout(() => { btn.classList.remove('spinning'); btn.disabled = false; }, 600); }
+    await App.refresh();
+  },
+
+  renderProviderStrip() {
+    const strip  = document.getElementById('provider-strip');
+    const active = config.settings.provider || 'binance';
+    strip.querySelectorAll('.prov-chip').forEach(c => c.remove());
+    for (const p of providers) {
+      const m    = PROVIDER_META[p.id] || { name: p.name, color:'#666', label: p.id[0].toUpperCase() };
+      const chip = document.createElement('button');
+      chip.className = `prov-chip${p.id === active ? ' active' : ''}`;
+      chip.dataset.pid = p.id;
+      chip.title = m.desc || p.name;
+      chip.innerHTML = `<span class="prov-dot"></span>${m.name}`;
+      chip.onclick = () => App.setProvider(p.id);
+      strip.appendChild(chip);
+    }
+  },
+
+  renderSettingsProviders() {
+    const c = document.getElementById('cfg-providers');
+    c.innerHTML = '';
+    const active = config.settings.provider || 'binance';
+    for (const p of providers) {
+      const m = PROVIDER_META[p.id] || { name: p.name, color:'#666', label:p.id[0].toUpperCase(), tag:'tag-cyan', tagLabel:'', desc:'' };
+      const card = document.createElement('div');
+      card.className = `sprov-card${p.id === active ? ' active' : ''}`;
+      card.dataset.pid = p.id;
+      card.style.borderColor = p.id === active ? 'var(--cyan)' : '';
+      card.style.background  = p.id === active ? 'var(--cyan-dim)' : '';
+      card.innerHTML = `
+        <div class="sprov-logo" style="background:${m.color}">${m.label}</div>
+        <div class="sprov-info"><div class="sprov-name">${m.name}</div><div class="sprov-desc">${m.desc}</div></div>
+        <span class="sprov-tag ${m.tag}">${m.tagLabel}</span>`;
+      card.onclick = () => App.setProvider(p.id);
+      c.appendChild(card);
+    }
+  },
+
+  syncSettingsControls() {
+    const s = config.settings;
+    const el = id => document.getElementById(id);
+    el('cfg-repeat').value   = String(s.alarmRepeat ?? 3);
+    el('cfg-sound').checked  = s.soundEnabled !== false;
+    el('cfg-lang').value     = s.language || 'es';
+    el('cfg-interval').value = String(s.refreshInterval || 5000);
+    el('cfg-top').checked    = s.alwaysOnTop || false;
+    if (el('cfg-adc-enabled')) el('cfg-adc-enabled').checked = s.adcEnabled !== false;
+    this.updateADCGlobalBadge();
+    this.updateADCSettingsPanel();
+  },
+
+  updateADCGlobalBadge() {
+    const badge = document.getElementById('adc-global-badge');
+    const text  = document.getElementById('adc-global-text');
+    const chk   = document.getElementById('cfg-adc-enabled');
+    if (!badge) return;
+    const on = config?.settings?.adcEnabled !== false;
+    badge.className = 'adc-global-badge ' + (on ? 'on' : 'off');
+    if (text) text.textContent = on ? 'ACTIVO' : 'INACTIVO';
+    if (chk)  chk.checked = on;
+  },
+
+  updateADCSettingsPanel() {
+    // Update data cells
+    const statusVal = document.getElementById('adc-status-val');
+    const cyclesVal = document.getElementById('adc-cycles-val');
+    if (statusVal) statusVal.textContent = config?.settings?.adcEnabled !== false ? 'PROCESANDO' : 'PAUSADO';
+    if (cyclesVal) cyclesVal.textContent = adcCyclesDetected;
+
+    // Per-coin grid
+    const grid = document.getElementById('adc-coin-grid');
+    if (!grid) return;
+    const tracked = config?.tracked || [];
+    if (!tracked.length) {
+      grid.innerHTML = '<div style="font-size:8px;color:var(--t3);grid-column:1/-1;text-align:center;padding:8px">Agrega monedas para ver el estado</div>';
+      return;
+    }
+    grid.innerHTML = tracked.map(sym => {
+      const meta   = TOKENS.find(t => t.symbol === sym);
+      const ticker = meta?.ticker || sym.replace('USDT','');
+      const st     = adcStatus[sym];
+      let stateText, stateClass;
+      if (!st || !st.ready) { stateText = 'CALIBRANDO'; stateClass = 'pending'; }
+      else if (st.ciclo === 1)  { stateText = '▲ ALCISTA'; stateClass = 'done'; }
+      else if (st.ciclo === -1) { stateText = '▼ BAJISTA'; stateClass = 'done'; }
+      else { stateText = 'ACTIVO'; stateClass = 'done'; }
+      return `<div class="adc-coin-item"><div class="adc-coin-sym">${ticker}</div><div class="adc-coin-state ${stateClass}">${stateText}</div></div>`;
+    }).join('');
+  },
+
+  _updateCardADCBadge(sym) {
+    const badge = document.getElementById(`adc-badge-${sym}`);
+    if (!badge) return;
+    const st = adcStatus[sym];
+    if (!st || !st.ready) return;
+    if (st.ciclo === 1)  { badge.className = 'adc-badge long'; badge.textContent = '▲ ALCISTA'; }
+    else if (st.ciclo === -1) { badge.className = 'adc-badge short'; badge.textContent = '▼ BAJISTA'; }
+    else { badge.className = 'adc-badge wait'; badge.textContent = '◈ ADC'; }
+
+    // Update analysis bar too
+    const card = document.getElementById(`card-${sym}`);
+    if (!card) return;
+    const barLabel = card.querySelector('.adc-bar-label');
+    const barLed   = card.querySelector('.adc-led');
+    if (barLabel && barLed) {
+      if (st.ciclo === 1)  { barLabel.className = 'adc-bar-label long'; barLabel.textContent = 'ADC ▲ ALCISTA'; barLed.className = 'adc-led long'; }
+      else if (st.ciclo === -1) { barLabel.className = 'adc-bar-label short'; barLabel.textContent = 'ADC ▼ BAJISTA'; barLed.className = 'adc-led short'; }
+    }
+  },
+
+  renderCoins(ticks, symbols) {
+    const container = document.getElementById('coin-list');
+    const tickMap   = {};
+    ticks.forEach(t => { tickMap[t.symbol] = t; });
+
+    [...container.querySelectorAll('.swipe-wrapper')].forEach(w => {
+      if (!symbols.includes(w.dataset.symbol)) w.remove();
+    });
+    document.getElementById('loading-state')?.remove();
+
+    symbols.forEach((sym, idx) => {
+      const tick = tickMap[sym];
+      if (!tick) return;
+      const cfg   = config.alerts[sym] || alertEngine.defaultAlertConfig();
+      const evals = alertEngine.evaluate(tick, cfg);
+      evals.forEach(r => {
+        if (r.triggered) {
+          const cardEl = document.getElementById(`card-${sym}`);
+          notifMgr.trigger(sym, r.pluginId, r.message, cardEl);
+        }
+      });
+      if (!evals.some(r => r.triggered)) notifMgr.stopFlash(sym);
+
+      const hasAlert = this._hasAlerts(sym);
+      const up       = tick.change24h >= 0;
+      const meta     = TOKENS.find(t => t.symbol === sym);
+      const ticker   = meta?.ticker  || sym.replace('USDT','');
+      const name     = meta?.display || ticker;
+
+      const st = adcStatus[sym];
+      let adcBadgeHtml = '';
+      if (!st || !st.ready) {
+        adcBadgeHtml = `<span class="adc-badge wait" id="adc-badge-${sym}">⏳ ADC</span>`;
+      } else if (st.ciclo === 1) {
+        adcBadgeHtml = `<span class="adc-badge long" id="adc-badge-${sym}">▲ ALCISTA</span>`;
+      } else if (st.ciclo === -1) {
+        adcBadgeHtml = `<span class="adc-badge short" id="adc-badge-${sym}">▼ BAJISTA</span>`;
+      } else {
+        adcBadgeHtml = `<span class="adc-badge wait" id="adc-badge-${sym}">◈ ADC</span>`;
+      }
+
+      const adcEnabled = config.settings?.adcEnabled !== false;
+      let barLedClass = 'adc-led amber', barLabelClass = 'adc-bar-label wait', barLabelText = 'CALIBRANDO';
+      if (!adcEnabled) { barLedClass = 'adc-led'; barLabelClass = 'adc-bar-label'; barLabelText = 'ADC INACTIVO'; }
+      else if (st?.ready) {
+        if (st.ciclo === 1)  { barLedClass = 'adc-led long';  barLabelClass = 'adc-bar-label long';  barLabelText = 'ADC ▲ ALCISTA'; }
+        else if (st.ciclo === -1) { barLedClass = 'adc-led short'; barLabelClass = 'adc-bar-label short'; barLabelText = 'ADC ▼ BAJISTA'; }
+        else { barLedClass = 'adc-led'; barLabelClass = 'adc-bar-label'; barLabelText = 'ADC ACTIVO'; }
+      }
+
+      let wrapper = container.querySelector(`.swipe-wrapper[data-symbol="${sym}"]`);
+      if (!wrapper) {
+        wrapper = document.createElement('div');
+        wrapper.className = 'swipe-wrapper';
+        wrapper.dataset.symbol = sym;
+        wrapper.style.animationDelay = `${idx * 0.04}s`;
+
+        const deleteBg = document.createElement('div');
+        deleteBg.className = 'swipe-delete-bg';
+        deleteBg.innerHTML = '<div class="del-icon">🗑</div><div class="del-label">Eliminar</div>';
+        wrapper.appendChild(deleteBg);
+
+        const card = document.createElement('div');
+        card.className = 'coin-card';
+        card.id = `card-${sym}`;
+        card.dataset.symbol = sym;
+        card.onclick = () => this.openAlertConfig(sym);
+        wrapper.appendChild(card);
+        container.appendChild(wrapper);
+        this._attachSwipe(wrapper, sym);
+      }
+
+      const card = document.getElementById(`card-${sym}`);
+      if (!card) return;
+
+      card.innerHTML = `
+        <div class="coin-card-top">
+          <img class="coin-icon"
+            src="${iconUrl(ticker)}"
+            onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 rx=%2216%22 fill=%22%23222%22/><text x=%2250%25%22 y=%2255%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22white%22 font-size=%2212%22>${ticker[0]}</text></svg>'"
+            alt="${ticker}">
+          <div class="coin-meta">
+            <div class="coin-name">${name}${hasAlert ? ' <span class="alert-dot"></span>' : ''}</div>
+            <div class="coin-chg ${up?'up':'down'}">${up?'↑':'↓'} ${Math.abs(tick.change24h).toFixed(2)}% 24h</div>
+            ${adcBadgeHtml}
+          </div>
+          <div class="coin-right">
+            <div class="coin-price">$${this._fmt(tick.price)}</div>
+            <div class="coin-pct ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(tick.change24h).toFixed(2)}%</div>
+            <div class="coin-src">${tick.source || ''}</div>
+          </div>
+        </div>
+        <div class="analysis-bar">
+          <div class="scan-beam"></div>
+          <div class="wave-bars">
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+          </div>
+          <div class="adc-bar-status">
+            <div class="${barLedClass}"></div>
+            <span class="${barLabelClass}">${barLabelText}</span>
+          </div>
+          <div class="adc-metrics">
+            <div class="adc-metric-dot"></div>
+            <div class="adc-metric-dot"></div>
+            <div class="adc-metric-dot"></div>
+          </div>
+        </div>`;
+    });
+
+    const cnt = Object.values(config.alerts || {}).filter(a =>
+      (a.price_target?.price ?? 0) > 0 || (a.percent_rise?.rise ?? 0) > 0 || (a.percent_drop?.drop ?? 0) > 0).length;
+    document.getElementById('alerts-dot').className = 'dot' + (cnt > 0 ? ' vis' : '');
+  },
+
+  _attachSwipe(wrapper, sym) {
+    const card = wrapper.querySelector('.coin-card');
+    const bg   = wrapper.querySelector('.swipe-delete-bg');
+    const THRESHOLD = 72;
+    let startX = 0, startY = 0, currentX = 0, isSwiping = false, locked = false;
+
+    const onStart = (x, y) => { if (locked) return; startX = x; startY = y; currentX = 0; isSwiping = false; };
+    const onMove  = (x, y) => {
+      if (locked) return;
+      const dx = x - startX, dy = y - startY;
+      if (!isSwiping && Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+      if (!isSwiping) { if (Math.abs(dx) > Math.abs(dy)) isSwiping = true; else return; }
+      currentX = Math.min(0, dx);
+      card.classList.add('swiping');
+      card.style.transform = `translateX(${currentX}px)`;
+      bg.classList.toggle('visible', Math.abs(currentX) / THRESHOLD > 0.15);
+    };
+    const onEnd = () => {
+      if (locked || !isSwiping) { card.style.transform = ''; return; }
+      isSwiping = false; card.classList.remove('swiping');
+      if (Math.abs(currentX) >= THRESHOLD) {
+        locked = true;
+        card.style.transition = 'transform 0.22s ease';
+        card.style.transform  = 'translateX(-110%)';
+        setTimeout(() => { this._deleteCoin(sym, wrapper); }, 230);
+      } else {
+        card.style.transition = 'transform 0.2s ease';
+        card.style.transform  = '';
+        bg.classList.remove('visible');
+        setTimeout(() => { card.style.transition = ''; }, 220);
+      }
+    };
+
+    card.addEventListener('mousedown', e => { onStart(e.clientX, e.clientY); });
+    window.addEventListener('mousemove', e => { if (startX) onMove(e.clientX, e.clientY); });
+    window.addEventListener('mouseup', () => { if (startX) { onEnd(); startX = 0; } });
+    card.addEventListener('touchstart', e => { const t = e.touches[0]; onStart(t.clientX, t.clientY); }, { passive: true });
+    card.addEventListener('touchmove', e => { const t = e.touches[0]; onMove(t.clientX, t.clientY); if (isSwiping) e.preventDefault(); }, { passive: false });
+    card.addEventListener('touchend', onEnd);
+  },
+
+  _deleteCoin(sym, wrapper) {
+    config.tracked   = (config.tracked  || []).filter(s => s !== sym);
+    config.favorites = (config.favorites|| []).filter(s => s !== sym);
+    delete config.alerts[sym];
+    delete adcStatus[sym];
+    notifMgr.clearAll(sym); notifMgr.stopFlash(sym);
+    wrapper?.remove();
+    App.persistConfig();
+    App.refresh();
+    UI.updateADCSettingsPanel();
+    Toast.show('Moneda eliminada', 'info');
+  },
+
+  _fmt(n) {
+    if (!n) return '—';
+    if (n >= 1000) return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+    if (n >= 1)    return n.toFixed(4);
+    return n.toFixed(6);
+  },
+
+  _hasAlerts(sym) {
+    const a = config.alerts[sym];
+    if (!a) return false;
+    return (a.price_target?.price ?? 0) > 0 || (a.percent_rise?.rise ?? 0) > 0 || (a.percent_drop?.drop ?? 0) > 0;
+  },
+
+  openAlertsPanel()  { this._renderAlerts(); document.getElementById('panel-alerts').classList.add('open'); },
+  closeAlertsPanel() { document.getElementById('panel-alerts').classList.remove('open'); },
+
+  _renderAlerts() {
+    const list = document.getElementById('alerts-list');
+    list.innerHTML = '';
+    const active = Object.entries(config.alerts || {}).filter(([,a]) =>
+      (a.price_target?.price ?? 0) > 0 || (a.percent_rise?.rise ?? 0) > 0 || (a.percent_drop?.drop ?? 0) > 0);
+    if (!active.length) {
+      list.innerHTML = `<div class="alert-empty"><div style="font-size:26px;opacity:.3">🔕</div><span>Sin alertas.<br>Toca una moneda para crear una.</span></div>`;
+      return;
+    }
+    active.forEach(([sym, a]) => {
+      const meta   = TOKENS.find(t => t.symbol === sym);
+      const ticker = meta?.ticker || sym.replace('USDT','');
+      const name   = meta?.display || ticker;
+      const muted  = notifMgr.isMuted(sym);
+      const pt = a.price_target?.price ?? 0;
+      const ri = a.percent_rise?.rise  ?? 0;
+      const dr = a.percent_drop?.drop  ?? 0;
+      const adcOn = a.adc_enabled !== false && config.settings?.adcEnabled !== false;
+      const chips = [
+        pt > 0 ? `<span class="cond-chip price">💵 $${pt.toLocaleString()}</span>` : '',
+        ri > 0 ? `<span class="cond-chip rise">📈 +${ri}%</span>` : '',
+        dr > 0 ? `<span class="cond-chip drop">📉 −${dr}%</span>` : '',
+        adcOn   ? `<span class="cond-chip" style="background:rgba(0,229,160,.1);color:var(--emerald);border:1px solid rgba(0,229,160,.2)">⚡ ADC</span>` : '',
+      ].join('');
+      const row = document.createElement('div');
+      row.className = 'alert-row';
+      row.innerHTML = `
+        <div class="ar-top">
+          <div class="ar-coin">
+            <img src="${iconUrl(ticker)}" onerror="this.style.visibility='hidden'" alt="${ticker}">
+            <span class="ar-name">${name}</span>
+          </div>
+          <div class="ar-actions">
+            <button class="ar-btn ${muted?'muted':''}" title="${muted?'Activar':'Silenciar'}" onclick="UI._toggleMute('${sym}',this)">${muted?'🔕':'🔔'}</button>
+            <button class="ar-btn" title="Editar" onclick="UI.closeAlertsPanel();UI.openAlertConfig('${sym}')">✏️</button>
+            <button class="ar-btn del" title="Eliminar" onclick="UI._delAlertFromPanel('${sym}',this)">🗑</button>
+          </div>
+        </div>
+        <div class="cond-chips">${chips || '<span style="font-size:9px;color:var(--t3)">Sin condiciones</span>'}</div>`;
+      list.appendChild(row);
+    });
+  },
+
+  _toggleMute(sym, btn) {
+    if (notifMgr.isMuted(sym)) {
+      notifMgr.unmute(sym); btn.textContent = '🔔'; btn.classList.remove('muted'); btn.title = 'Silenciar';
+    } else {
+      notifMgr.mute(sym); btn.textContent = '🔕'; btn.classList.add('muted'); btn.title = 'Activar';
+    }
+  },
+
+  _delAlertFromPanel(sym, btn) {
+    if (btn.dataset.confirm !== '1') {
+      btn.textContent = '⚠️'; btn.dataset.confirm = '1'; btn.title = 'Confirmar';
+      setTimeout(() => { btn.textContent = '🗑'; delete btn.dataset.confirm; }, 2500);
+      return;
+    }
+    config.alerts[sym] = alertEngine.defaultAlertConfig();
+    notifMgr.clearAll(sym); notifMgr.stopFlash(sym);
+    App.persistConfig(); this._renderAlerts();
+    Toast.show('Alerta eliminada', 'info');
+  },
+
+  openSettingsPanel() {
+    this.renderSettingsProviders(); this.syncSettingsControls();
+    this.updateADCSettingsPanel();
+    document.getElementById('panel-settings').classList.add('open');
+  },
+  closeSettingsPanel() { document.getElementById('panel-settings').classList.remove('open'); },
+
+  openAddModal() {
+    const list = document.getElementById('tokens-list');
+    list.innerHTML = '';
+    TOKENS.forEach(tok => {
+      const added = (config.tracked || []).includes(tok.symbol);
+      const fav   = (config.favorites || []).includes(tok.symbol);
+      const div   = document.createElement('div');
+      div.className = `tok-item ${added ? '' : 'tok-available'}`;
+      if (added) {
+        div.innerHTML = `
+          <img src="${iconUrl(tok.ticker)}" onerror="this.style.visibility='hidden'" alt="${tok.ticker}">
+          <div><div class="tok-name">${tok.display}</div><div class="tok-sym">${tok.symbol}</div></div>
+          <span class="tok-added">Añadida ✓</span>
+          <button class="tok-fav ${fav?'on':''}" title="${fav?'Quitar favorito':'Marcar favorito'}"
+            onclick="event.stopPropagation();UI._toggleFav('${tok.symbol}',this)">${fav?'⭐':'☆'}</button>`;
+      } else {
+        div.innerHTML = `
+          <img src="${iconUrl(tok.ticker)}" onerror="this.style.visibility='hidden'" alt="${tok.ticker}">
+          <div><div class="tok-name">${tok.display}</div><div class="tok-sym">${tok.symbol}</div></div>
+          <button class="tok-add-btn" onclick="event.stopPropagation();UI._addCoinBySymbol('${tok.symbol}',this)">+ Agregar</button>`;
+      }
+      list.appendChild(div);
+    });
+    document.getElementById('modal-add').classList.add('open');
+  },
+
+  _toggleFav(sym, btn) {
+    if (!config.favorites) config.favorites = [];
+    const idx = config.favorites.indexOf(sym);
+    if (idx >= 0) { config.favorites.splice(idx, 1); btn.textContent = '☆'; btn.classList.remove('on'); }
+    else { if (!(config.tracked || []).includes(sym)) { Toast.show('Agrega la moneda primero', 'warn'); return; } config.favorites.push(sym); btn.textContent = '⭐'; btn.classList.add('on'); }
+    App.persistConfig(); App.refresh();
+  },
+
+  _addCoinBySymbol(symbol, btn) {
+    const tok = TOKENS.find(t => t.symbol === symbol);
+    if (!tok) return;
+    if (!config.tracked) config.tracked = [];
+    if (config.tracked.includes(tok.symbol)) { Toast.show(`${tok.display} ya está en el dashboard`, 'info'); return; }
+    config.tracked.push(tok.symbol);
+    if (!config.favorites) config.favorites = [];
+    config.favorites.push(tok.symbol);
+    if (!config.alerts) config.alerts = {};
+    config.alerts[tok.symbol] = alertEngine.defaultAlertConfig();
+    App.persistConfig();
+
+    // Trigger ADC calibration for new coin
+    if (window.sniperAPI?.calibrateAdc) {
+      window.sniperAPI.calibrateAdc(tok.symbol)
+        .then(() => window.sniperAPI?.log('INFO', `[ADC] calibración iniciada ${tok.symbol}`))
+        .catch(() => {});
+    }
+
+    if (btn) {
+      btn.textContent = '✓ Añadida';
+      btn.style.background  = 'var(--em-dim)';
+      btn.style.borderColor = 'var(--emerald)';
+      btn.style.color       = 'var(--emerald)';
+      btn.disabled = true;
+    }
+    setTimeout(() => { this.openAddModal(); }, 600);
+    App.refresh();
+    UI.updateADCSettingsPanel();
+    Toast.show(`${tok.display} agregada — calibrando ADC…`, 'success', 4000);
+  },
+
+  openAlertConfig(sym) {
+    currentAlertSym = sym;
+    const meta = TOKENS.find(t => t.symbol === sym);
+    document.getElementById('alert-modal-title').textContent = `Alerta — ${meta?.display || sym}`;
+    const raw   = config.alerts[sym] || {};
+    const price = raw.price_target?.price ?? raw.price ?? 0;
+    const rise  = raw.percent_rise?.rise  ?? raw.rise  ?? 0;
+    const drop  = raw.percent_drop?.drop  ?? raw.drop  ?? 0;
+    const adcOn = raw.adc_enabled !== false;
+    document.getElementById('input-price').value = price > 0 ? price : '';
+    document.getElementById('input-rise').value  = rise  > 0 ? rise  : '';
+    document.getElementById('input-drop').value  = drop  > 0 ? drop  : '';
+    const adcChk = document.getElementById('input-adc-enabled');
+    if (adcChk) adcChk.checked = adcOn;
+    document.getElementById('adc-modal-sym').textContent = meta?.ticker || sym.replace('USDT','');
+    this.updateADCModalStatus();
+    const btn = document.getElementById('btn-remove-coin');
+    btn.textContent = 'Eliminar moneda del dashboard'; delete btn.dataset.confirm;
+    document.getElementById('modal-alert').classList.add('open');
+  },
+
+  updateADCModalStatus() {
+    const chk  = document.getElementById('input-adc-enabled');
+    const pill = document.getElementById('adc-modal-pill');
+    const text = document.getElementById('adc-modal-pill-text');
+    const wave = document.getElementById('adc-modal-wave');
+    if (!chk || !pill) return;
+    const enabled = chk.checked;
+    const st = adcStatus[currentAlertSym];
+    if (!enabled) {
+      pill.className = 'adc-status-pill inactive'; text.textContent = 'DESACTIVADO';
+      if (wave) wave.style.display = 'none';
+    } else if (!st || !st.ready) {
+      pill.className = 'adc-status-pill calib'; text.textContent = 'CALIBRANDO…';
+      if (wave) wave.style.display = 'flex';
+    } else {
+      pill.className = 'adc-status-pill active';
+      text.textContent = st.ciclo === 1 ? '▲ ALCISTA' : st.ciclo === -1 ? '▼ BAJISTA' : 'ACTIVO';
+      if (wave) wave.style.display = 'flex';
+    }
+  },
+
+  saveAlert() {
+    const price = parseFloat(document.getElementById('input-price').value) || 0;
+    const rise  = parseFloat(document.getElementById('input-rise').value)  || 0;
+    const drop  = parseFloat(document.getElementById('input-drop').value)  || 0;
+    const adcOn = document.getElementById('input-adc-enabled')?.checked !== false;
+    if (price < 0 || rise < 0 || drop < 0) { Toast.show('Los valores deben ser positivos', 'error'); return; }
+    config.alerts[currentAlertSym] = {
+      price_target: { price }, percent_rise: { rise }, percent_drop: { drop }, adc_enabled: adcOn
+    };
+    notifMgr.clearAll(currentAlertSym); notifMgr.stopFlash(currentAlertSym);
+    App.persistConfig(); this.closeModals(); App.refresh();
+    Toast.show('Alerta guardada ✓', 'success');
+  },
+
+  removeCoin() {
+    const btn = document.getElementById('btn-remove-coin');
+    if (btn.dataset.confirm !== '1') {
+      btn.textContent = '⚠️ Confirmar eliminación'; btn.dataset.confirm = '1';
+      setTimeout(() => { btn.textContent = 'Eliminar moneda del dashboard'; delete btn.dataset.confirm; }, 3000);
+      return;
+    }
+    const sym     = currentAlertSym;
+    const wrapper = document.querySelector(`.swipe-wrapper[data-symbol="${sym}"]`);
+    this._deleteCoin(sym, wrapper);
+    this.closeModals();
+  },
+
+  closeModals() {
+    document.querySelectorAll('.overlay').forEach(m => m.classList.remove('open'));
+    const btn = document.getElementById('btn-remove-coin');
+    if (btn) { btn.textContent = 'Eliminar moneda del dashboard'; delete btn.dataset.confirm; }
+  },
+
+  toggleChangelog() { document.getElementById('changelog-panel').classList.toggle('open'); },
+};
+
+function migrateAlerts(cfg) {
+  if (!cfg?.alerts) return cfg;
+  Object.keys(cfg.alerts).forEach(sym => {
+    const a = cfg.alerts[sym];
+    if (a && 'price' in a && !('price_target' in a)) {
+      cfg.alerts[sym] = {
+        price_target: { price: a.price||0 },
+        percent_rise: { rise:  a.rise ||0 },
+        percent_drop: { drop:  a.drop ||0 },
+        adc_enabled:  a.adc_enabled !== false,
+      };
+    }
+    if (a && !('adc_enabled' in a)) a.adc_enabled = true;
+  });
+  return cfg;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    UI.closeModals(); UI.closeAlertsPanel(); UI.closeSettingsPanel();
+    document.getElementById('changelog-panel').classList.remove('open');
+  }
+});
+document.addEventListener('click', e => {
+  const panel = document.getElementById('changelog-panel');
+  const chip  = document.getElementById('ver-chip');
+  if (panel.classList.contains('open') && !panel.contains(e.target) && !chip.contains(e.target)) {
+    panel.classList.remove('open');
+  }
+});
+document.querySelectorAll('.overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) UI.closeModals(); });
+});
+
+(async () => {
+  if (!window.sniperAPI) {
+    document.getElementById('coin-list').innerHTML = `
+      <div class="empty-state">
+        <div class="e-icon">⚠️</div>
+        <span style="color:var(--rose);font-weight:600">preload.js no encontrado</span>
+        <span style="font-size:10px;color:var(--t2);line-height:1.6;text-align:center">
+          Ejecuta <code style="color:var(--cyan)">npm start</code>
+        </span>
+      </div>`;
+    return;
+  }
+  try { await App.init(); }
+  catch (err) {
+    console.error('Boot error:', err);
+    window.sniperAPI?.log('ERROR', 'Boot failed', { error: err.message });
+    document.getElementById('coin-list').innerHTML =
+      `<div class="empty-state"><div class="e-icon">⚠️</div><span>Error al iniciar</span></div>`;
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy"
+  content="default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net; media-src * blob: data:; img-src * data:;">
+<title>Sniper Alert — Panel Administrativo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #050810;
+  --bg2:       #090d1a;
+  --bg3:       #0d1225;
+  --panel:     #0a0f1e;
+  --border:    rgba(0,255,180,0.10);
+  --border2:   rgba(0,255,180,0.28);
+  --green:     #00ffb4;
+  --green-dim: rgba(0,255,180,0.07);
+  --green-mid: rgba(0,255,180,0.15);
+  --red:       #ff3860;
+  --red-dim:   rgba(255,56,96,0.10);
+  --amber:     #f5a623;
+  --amber-dim: rgba(245,166,35,0.10);
+  --cyan:      #00d9ff;
+  --cyan-dim:  rgba(0,217,255,0.10);
+  --violet:    #9b59ff;
+  --t1:        #e8f0ff;
+  --t2:        #7a86a8;
+  --t3:        #3a4260;
+  --mono:      'Share Tech Mono', monospace;
+  --sans:      'Rajdhani', sans-serif;
+  --r:         8px;
+  --ease:      0.15s cubic-bezier(0.4,0,0.2,1);
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html, body { height:100%; font-family:var(--sans); color:var(--t1);
+  background:var(--bg); -webkit-font-smoothing:antialiased; overflow:hidden; }
+button { font-family:var(--sans); cursor:pointer; }
+input, select, textarea { font-family:var(--mono); }
+
+/* ── LOCK SCREEN ── */
+#lock-screen {
+  position:fixed; inset:0; background:var(--bg);
+  display:flex; align-items:center; justify-content:center;
+  z-index:1000; flex-direction:column;
+}
+.lock-wrap {
+  display:flex; flex-direction:column; align-items:center; gap:20px;
+  padding:40px 48px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:16px;
+  box-shadow:0 0 60px rgba(0,255,180,0.06);
+  animation:lockIn .4s ease;
+}
+@keyframes lockIn { from{opacity:0;transform:scale(.94) translateY(10px)} to{opacity:1;transform:none} }
+.lock-icon { font-size:32px; filter:drop-shadow(0 0 12px rgba(0,255,180,.4)); }
+.lock-title { font-size:20px; font-weight:700; letter-spacing:2px; color:var(--green); text-transform:uppercase; }
+.lock-sub { font-family:var(--mono); font-size:10px; color:var(--t3); letter-spacing:1px; }
+.lock-input {
+  width:260px; padding:11px 14px;
+  background:rgba(0,0,0,.5); border:1px solid var(--border);
+  color:var(--green); border-radius:var(--r);
+  font-family:var(--mono); font-size:15px; letter-spacing:4px;
+  text-align:center; outline:none;
+  transition:border-color var(--ease), box-shadow var(--ease);
+}
+.lock-input:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba(0,255,180,.08); }
+.lock-input.error { border-color:var(--red); animation:shake .3s ease; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+.lock-btn {
+  width:260px; padding:11px; background:var(--green); border:none;
+  color:#050810; font-family:var(--sans); font-weight:700; font-size:13px;
+  letter-spacing:2px; text-transform:uppercase; border-radius:var(--r);
+  transition:opacity var(--ease), transform var(--ease);
+  box-shadow:0 0 20px rgba(0,255,180,.25);
+}
+.lock-btn:hover { opacity:.88; transform:translateY(-1px); }
+.lock-err { font-family:var(--mono); font-size:10px; color:var(--red); letter-spacing:1px; height:14px; }
+
+/* ── APP SHELL ── */
+#admin-app { height:100vh; display:flex; flex-direction:column; display:none; }
+
+/* ── HEADER ── */
+.adm-header {
+  -webkit-app-region:drag;
+  height:46px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 16px;
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+}
+.adm-brand { display:flex; align-items:center; gap:10px; }
+.adm-brand-icon {
+  width:26px; height:26px; border-radius:6px;
+  background:linear-gradient(135deg, var(--green), var(--cyan));
+  display:flex; align-items:center; justify-content:center; font-size:13px;
+  box-shadow:0 0 12px rgba(0,255,180,.3);
+}
+.adm-brand-name { font-size:13px; font-weight:700; letter-spacing:2px; color:var(--green); text-transform:uppercase; }
+.adm-brand-badge {
+  font-family:var(--mono); font-size:8px; padding:2px 6px;
+  background:rgba(255,56,96,.15); border:1px solid rgba(255,56,96,.3);
+  color:var(--red); border-radius:4px; letter-spacing:1px;
+}
+.adm-hdr-right { -webkit-app-region:no-drag; display:flex; align-items:center; gap:8px; }
+
+/* Live indicator */
+.live-indicator {
+  display:flex; align-items:center; gap:6px;
+  font-family:var(--mono); font-size:9px; color:var(--t3);
+  padding:3px 10px; border:1px solid var(--border); border-radius:20px;
+}
+.live-dot {
+  width:6px; height:6px; border-radius:50%;
+  background:var(--green); box-shadow:0 0 6px var(--green);
+  animation:livePulse 2s ease infinite;
+}
+.live-dot.dead { background:var(--t3); box-shadow:none; animation:none; }
+@keyframes livePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+
+.win-btn { width:20px; height:20px; border-radius:50%; border:none; font-size:10px; font-weight:700;
+  display:flex; align-items:center; justify-content:center; transition:filter var(--ease),transform var(--ease); }
+.win-btn.min { background:rgba(245,166,35,.2); color:var(--amber); }
+.win-btn.cls { background:rgba(255,56,96,.2); color:var(--red); }
+.win-btn:hover { filter:brightness(1.6); transform:scale(1.1); }
+
+/* ── LAYOUT ── */
+.adm-body { flex:1; display:flex; overflow:hidden; }
+
+/* ── SIDEBAR ── */
+.adm-sidebar {
+  width:210px; flex-shrink:0;
+  background:var(--bg2); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; padding:10px 0;
+  overflow-y:auto;
+}
+.adm-sidebar::-webkit-scrollbar { width:3px; }
+.adm-sidebar::-webkit-scrollbar-thumb { background:rgba(255,255,255,.06); border-radius:2px; }
+.nav-section { padding:8px 14px 4px; font-family:var(--mono); font-size:8px; color:var(--t3); letter-spacing:2px; text-transform:uppercase; }
+.nav-item {
+  display:flex; align-items:center; gap:10px;
+  padding:8px 16px; cursor:pointer; font-size:13px; font-weight:600;
+  color:var(--t2); letter-spacing:.5px;
+  transition:background var(--ease), color var(--ease), border-color var(--ease);
+  border-left:2px solid transparent; position:relative;
+}
+.nav-item:hover { background:var(--green-dim); color:var(--t1); }
+.nav-item.active { background:var(--green-dim); color:var(--green); border-left-color:var(--green); }
+.nav-item .nav-icon { font-size:14px; flex-shrink:0; width:18px; text-align:center; }
+.nav-badge {
+  margin-left:auto; background:var(--red); color:#fff;
+  font-family:var(--mono); font-size:8px; padding:1px 5px;
+  border-radius:4px; font-weight:700;
+}
+.nav-badge.amber { background:var(--amber); color:#050810; }
+
+/* ── MAIN CONTENT ── */
+.adm-main { flex:1; overflow-y:auto; padding:16px; background:var(--bg); }
+.adm-main::-webkit-scrollbar { width:4px; }
+.adm-main::-webkit-scrollbar-thumb { background:rgba(255,255,255,.07); border-radius:2px; }
+
+.tab-page { display:none; }
+.tab-page.active { display:block; animation:fadeIn .2s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+
+.page-header { margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; }
+.page-title { font-size:18px; font-weight:700; letter-spacing:1px; color:var(--green); }
+.page-sub { font-family:var(--mono); font-size:9px; color:var(--t3); margin-top:3px; letter-spacing:1px; }
+
+/* ── CARDS ── */
+.card {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:12px; padding:14px 16px; margin-bottom:12px;
+}
+.card-title {
+  font-size:10px; font-weight:700; color:var(--cyan);
+  text-transform:uppercase; letter-spacing:1.5px;
+  margin-bottom:12px; padding-bottom:7px;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:7px;
+}
+.card-title .ct-icon { font-size:12px; }
+
+/* ── STATS GRID ── */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; margin-bottom:12px; }
+.stat-card {
+  background:var(--bg2); border:1px solid var(--border); border-radius:10px;
+  padding:12px 14px; position:relative; overflow:hidden;
+  transition:border-color var(--ease);
+}
+.stat-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:var(--green); opacity:.5;
+}
+.stat-card.red::before { background:var(--red); }
+.stat-card.amber::before { background:var(--amber); }
+.stat-card.cyan::before { background:var(--cyan); }
+.stat-card.violet::before { background:var(--violet); }
+.stat-val { font-family:var(--mono); font-size:22px; font-weight:700; color:var(--green); line-height:1; }
+.stat-card.red .stat-val { color:var(--red); }
+.stat-card.amber .stat-val { color:var(--amber); }
+.stat-card.cyan .stat-val { color:var(--cyan); }
+.stat-card.violet .stat-val { color:var(--violet); }
+.stat-label { font-family:var(--mono); font-size:8px; color:var(--t3); margin-top:4px; letter-spacing:1px; text-transform:uppercase; }
+
+/* ── MERCADO ── */
+.market-table-wrap { overflow-x:auto; }
+.market-table {
+  width:100%; border-collapse:collapse;
+  min-width:580px;
+}
+.market-table th {
+  font-family:var(--mono); font-size:8px; color:var(--t3);
+  text-align:left; padding:6px 8px; letter-spacing:1.5px; text-transform:uppercase;
+  border-bottom:1px solid var(--border);
+  white-space:nowrap; cursor:pointer; user-select:none;
+  transition:color var(--ease);
+}
+.market-table th:hover { color:var(--cyan); }
+.market-table th.sort-asc::after  { content:' ↑'; color:var(--green); }
+.market-table th.sort-desc::after { content:' ↓'; color:var(--green); }
+.market-table td {
+  padding:7px 8px; border-bottom:1px solid rgba(255,255,255,.03);
+  font-size:12px; font-weight:500; vertical-align:middle;
+  transition:background .3s;
+}
+.market-table tr:last-child td { border-bottom:none; }
+.market-table tr:hover td { background:rgba(255,255,255,.02); }
+.market-table tr.flash-up td   { animation:rowFlashUp .6s ease; }
+.market-table tr.flash-down td { animation:rowFlashDown .6s ease; }
+@keyframes rowFlashUp   { 0%{background:rgba(0,255,180,.12)} 100%{background:transparent} }
+@keyframes rowFlashDown { 0%{background:rgba(255,56,96,.12)} 100%{background:transparent} }
+
+.td-sym { font-family:var(--mono); font-size:11px; color:var(--cyan); font-weight:700; }
+.td-sym-wrap { display:flex; align-items:center; gap:7px; }
+.td-coin-img { width:22px; height:22px; border-radius:50%; object-fit:contain;
+  background:rgba(255,255,255,.05); border:1px solid var(--border); padding:2px; flex-shrink:0; }
+.td-price { font-family:var(--mono); font-size:12px; font-weight:700; color:var(--t1); }
+.td-chg { font-family:var(--mono); font-size:11px; font-weight:700; }
+.td-chg.up { color:var(--green); }
+.td-chg.down { color:var(--red); }
+.spark-wrap { display:flex; align-items:center; gap:5px; }
+.spark-range {
+  width:60px; height:4px; background:rgba(255,255,255,.07); border-radius:2px;
+  position:relative; flex-shrink:0;
+}
+.spark-pos {
+  position:absolute; top:-1px; width:6px; height:6px;
+  border-radius:50%; background:var(--cyan);
+  box-shadow:0 0 4px var(--cyan);
+  transform:translateX(-50%);
+  transition:left .4s ease;
+}
+.spark-label { font-family:var(--mono); font-size:8px; color:var(--t3); white-space:nowrap; }
+.vol-bar-wrap { display:flex; align-items:center; gap:5px; min-width:80px; }
+.vol-bar-bg { flex:1; height:4px; background:rgba(255,255,255,.06); border-radius:2px; position:relative; }
+.vol-bar-fill {
+  height:100%; border-radius:2px;
+  background:linear-gradient(90deg, rgba(0,217,255,.4), rgba(0,217,255,.9));
+  transition:width .5s ease;
+}
+.vol-spike .vol-bar-fill { background:linear-gradient(90deg, rgba(255,166,35,.6), var(--amber)); }
+.vol-spike-badge {
+  font-family:var(--mono); font-size:7px; padding:1px 4px;
+  background:rgba(255,166,35,.2); border:1px solid rgba(255,166,35,.5);
+  color:var(--amber); border-radius:3px; white-space:nowrap;
+  animation:spikePulse 1.5s ease infinite;
+}
+@keyframes spikePulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+.vol-text { font-family:var(--mono); font-size:9px; color:var(--t3); white-space:nowrap; }
+.td-alert-chips { display:flex; gap:3px; flex-wrap:wrap; }
+.mini-chip {
+  font-family:var(--mono); font-size:7px; padding:1px 4px;
+  border-radius:3px; font-weight:700; white-space:nowrap;
+}
+.mini-chip.price { background:rgba(0,217,255,.12); color:var(--cyan); border:1px solid rgba(0,217,255,.3); }
+.mini-chip.rise  { background:rgba(0,255,180,.12); color:var(--green); border:1px solid rgba(0,255,180,.3); }
+.mini-chip.drop  { background:rgba(255,56,96,.12); color:var(--red); border:1px solid rgba(255,56,96,.3); }
+.mini-chip.vol   { background:rgba(245,166,35,.12); color:var(--amber); border:1px solid rgba(245,166,35,.3); }
+.mini-chip.none  { color:var(--t3); font-size:8px; }
+.td-status { display:flex; align-items:center; gap:4px; font-family:var(--mono); font-size:9px; }
+.status-led { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.status-led.ok    { background:var(--green); box-shadow:0 0 4px var(--green); }
+.status-led.warn  { background:var(--amber); box-shadow:0 0 4px var(--amber); animation:warnBlink 1s ease infinite; }
+.status-led.alert { background:var(--red);   box-shadow:0 0 6px var(--red); animation:warnBlink .5s ease infinite; }
+@keyframes warnBlink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ── FORM CONTROLS ──
+   FIX CRÍTICO: .row usa flex con wrap para evitar overflow del toggle
+*/
+.row {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  flex-wrap:nowrap;
+  gap:12px;
+  padding:10px 0;
+  border-bottom:1px solid rgba(255,255,255,.04);
+}
+.row:last-child { border-bottom:none; }
+.row-info { flex:1; min-width:0; }
+.row-label { font-size:13px; font-weight:600; color:var(--t1); }
+.row-sub { font-family:var(--mono); font-size:9px; color:var(--t3); margin-top:2px; line-height:1.4; }
+.row-sub.info-text { color:var(--t2); font-size:10px; line-height:1.5; margin-top:5px; }
+/* FIX: ctrl nunca crece, nunca se encoge, nunca desborda */
+.row-ctrl {
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+}
+
+.f-input {
+  background:rgba(0,0,0,.4); border:1px solid var(--border);
+  color:var(--t1); padding:5px 9px; border-radius:6px;
+  font-family:var(--mono); font-size:11px; outline:none;
+  transition:border-color var(--ease), box-shadow var(--ease);
+}
+.f-input:focus { border-color:rgba(0,255,180,.4); box-shadow:0 0 0 3px rgba(0,255,180,.06); }
+.f-input.w80 { width:80px; }
+.f-input.w120 { width:120px; }
+.f-input.w180 { width:180px; }
+
+.f-select {
+  background:rgba(0,0,0,.4); border:1px solid var(--border);
+  color:var(--t1); padding:5px 9px; border-radius:6px;
+  font-family:var(--mono); font-size:11px; outline:none;
+  cursor:pointer; min-width:100px;
+}
+.f-select:focus { border-color:rgba(0,255,180,.4); }
+
+/* FIX CRÍTICO: toggle tiene width fija, no puede desbordar */
+.toggle { position:relative; width:36px; height:19px; flex-shrink:0; }
+.toggle input { opacity:0; width:0; height:0; position:absolute; }
+.toggle-track {
+  position:absolute; inset:0; background:rgba(255,255,255,.1);
+  border-radius:99px; cursor:pointer; transition:background .2s;
+  border:1px solid var(--border);
+}
+.toggle input:checked + .toggle-track { background:var(--green); border-color:var(--green); }
+.toggle-track::after {
+  content:''; position:absolute; width:13px; height:13px;
+  background:#fff; border-radius:50%; top:2px; left:2px;
+  transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.3);
+}
+.toggle input:checked + .toggle-track::after { transform:translateX(17px); }
+
+.btn {
+  padding:6px 14px; border-radius:6px; font-family:var(--sans);
+  font-weight:700; font-size:12px; letter-spacing:.5px; border:1px solid;
+  transition:background var(--ease), border-color var(--ease), color var(--ease), transform var(--ease);
+  cursor:pointer;
+}
+.btn:hover { transform:translateY(-1px); }
+.btn:active { transform:scale(.98); }
+.btn-green  { background:var(--green); color:#050810; border-color:var(--green); box-shadow:0 0 14px rgba(0,255,180,.2); }
+.btn-ghost  { background:transparent; color:var(--t2); border-color:var(--border); }
+.btn-ghost:hover { background:rgba(255,255,255,.05); color:var(--t1); border-color:var(--border2); }
+.btn-red    { background:transparent; color:var(--red); border-color:rgba(255,56,96,.3); }
+.btn-red:hover { background:var(--red-dim); border-color:var(--red); }
+.btn-amber  { background:transparent; color:var(--amber); border-color:rgba(245,166,35,.3); }
+.btn-amber:hover { background:var(--amber-dim); border-color:var(--amber); }
+.btn-info   { background:transparent; color:var(--cyan); border-color:rgba(0,217,255,.3); font-size:10px; padding:3px 10px; }
+.btn-info:hover { background:var(--cyan-dim); border-color:var(--cyan); }
+
+.f-range {
+  -webkit-appearance:none; appearance:none;
+  width:120px; height:4px; border-radius:2px;
+  background:rgba(255,255,255,.1); outline:none; cursor:pointer;
+}
+.f-range::-webkit-slider-thumb {
+  -webkit-appearance:none; width:13px; height:13px;
+  border-radius:50%; background:var(--green);
+  box-shadow:0 0 6px rgba(0,255,180,.4); cursor:pointer;
+}
+
+/* ── INFO TOOLTIP OVERLAY ── */
+.info-overlay {
+  position:fixed; inset:0; background:rgba(5,8,16,.85);
+  display:flex; align-items:center; justify-content:center;
+  z-index:500; padding:20px; display:none;
+}
+.info-overlay.open { display:flex; animation:fadeIn .2s ease; }
+.info-box {
+  background:var(--bg2); border:1px solid var(--border2);
+  border-radius:14px; padding:22px 24px; max-width:480px; width:100%;
+  box-shadow:0 0 60px rgba(0,255,180,.08);
+  position:relative;
+}
+.info-box h3 { font-size:15px; font-weight:700; color:var(--green); margin-bottom:12px; letter-spacing:.5px; }
+.info-box p  { font-size:12px; color:var(--t2); line-height:1.7; margin-bottom:8px; }
+.info-box ul { padding-left:16px; }
+.info-box li { font-size:12px; color:var(--t2); line-height:1.7; margin-bottom:4px; }
+.info-box .info-close {
+  position:absolute; top:12px; right:14px;
+  background:none; border:none; color:var(--t2); font-size:18px;
+  cursor:pointer; transition:color var(--ease);
+}
+.info-box .info-close:hover { color:var(--t1); }
+
+/* ── VOL MULTIPLIER ── */
+.vol-multiplier-grid {
+  display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:8px;
+}
+.vol-mult-btn {
+  padding:8px 4px; border:1px solid var(--border); border-radius:8px;
+  background:rgba(255,255,255,.03); color:var(--t2);
+  font-family:var(--mono); font-size:11px; font-weight:700;
+  cursor:pointer; text-align:center;
+  transition:background var(--ease), border-color var(--ease), color var(--ease);
+}
+.vol-mult-btn:hover { border-color:var(--amber); color:var(--amber); }
+.vol-mult-btn.selected { background:var(--amber-dim); border-color:var(--amber); color:var(--amber); }
+
+/* ── ALERT LOG ── */
+.alert-log { max-height:200px; overflow-y:auto; }
+.alert-log::-webkit-scrollbar { width:3px; }
+.alert-log::-webkit-scrollbar-thumb { background:rgba(255,255,255,.08); border-radius:2px; }
+.alert-log-entry {
+  display:flex; align-items:flex-start; gap:8px; padding:7px 0;
+  border-bottom:1px solid rgba(255,255,255,.04);
+  animation:entryIn .3s ease;
+}
+@keyframes entryIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:none} }
+.alert-log-entry:last-child { border-bottom:none; }
+.ale-time { font-family:var(--mono); font-size:9px; color:var(--t3); white-space:nowrap; flex-shrink:0; padding-top:1px; }
+.ale-badge { font-family:var(--mono); font-size:8px; padding:1px 5px; border-radius:3px; flex-shrink:0; font-weight:700; }
+.ale-badge.price { background:rgba(0,217,255,.15); color:var(--cyan); }
+.ale-badge.rise  { background:rgba(0,255,180,.15); color:var(--green); }
+.ale-badge.drop  { background:rgba(255,56,96,.15); color:var(--red); }
+.ale-badge.vol   { background:rgba(245,166,35,.15); color:var(--amber); }
+.ale-msg { font-size:11px; color:var(--t2); line-height:1.4; }
+.ale-empty { font-family:var(--mono); font-size:10px; color:var(--t3); padding:12px 0; text-align:center; }
+
+/* ── AUDIO ── */
+.audio-drop-zone {
+  border:2px dashed var(--border); border-radius:10px;
+  padding:16px; text-align:center; cursor:pointer;
+  transition:border-color var(--ease), background var(--ease);
+  margin-top:8px;
+}
+.audio-drop-zone:hover, .audio-drop-zone.dragging {
+  border-color:var(--green); background:var(--green-dim);
+}
+.audio-drop-zone .adz-icon { font-size:24px; margin-bottom:5px; opacity:.5; }
+.audio-drop-zone .adz-text { font-family:var(--mono); font-size:10px; color:var(--t2); }
+.audio-file-name { font-family:var(--mono); font-size:10px; color:var(--green); margin-top:8px; display:none; }
+
+/* ── LOG VIEWER ── */
+.log-viewer {
+  background:#000; border:1px solid var(--border); border-radius:8px;
+  padding:10px; height:180px; overflow-y:auto; font-family:var(--mono);
+  font-size:10px; line-height:1.7;
+}
+.log-viewer::-webkit-scrollbar { width:3px; }
+.log-viewer::-webkit-scrollbar-thumb { background:rgba(255,255,255,.1); border-radius:2px; }
+.log-line { display:flex; gap:10px; }
+.log-ts { color:var(--t3); flex-shrink:0; }
+.log-level { flex-shrink:0; min-width:44px; }
+.log-level.INFO  { color:var(--green); }
+.log-level.WARN  { color:var(--amber); }
+.log-level.ERROR { color:var(--red); }
+.log-level.ALERT { color:var(--cyan); }
+.log-msg { color:var(--t2); word-break:break-all; }
+
+/* ── PROVIDER STATUS ── */
+.prov-row { display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,.04); }
+.prov-row:last-child { border-bottom:none; }
+.prov-name { font-size:13px; font-weight:600; }
+.prov-badge { display:flex; align-items:center; gap:5px; font-family:var(--mono); font-size:9px; color:var(--t2); }
+.prov-led { width:7px; height:7px; border-radius:50%; background:var(--t3); }
+.prov-led.ok { background:var(--green); box-shadow:0 0 5px var(--green); }
+
+/* ── ABOUT ── */
+.about-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.about-item { background:rgba(0,0,0,.2); border-radius:8px; padding:10px; }
+.about-key { font-family:var(--mono); font-size:9px; color:var(--t3); text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }
+.about-val { font-family:var(--mono); font-size:12px; color:var(--green); font-weight:700; }
+
+/* ── COOLDOWN ── */
+.cooldown-visual {
+  display:flex; align-items:center; gap:8px; padding:8px 10px;
+  background:rgba(0,0,0,.3); border-radius:6px; border:1px solid var(--border);
+  margin-top:8px; font-family:var(--mono); font-size:10px; color:var(--t2);
+}
+
+/* ── TOAST ── */
+#toast-zone { position:fixed; top:56px; right:14px; z-index:200; display:flex; flex-direction:column; gap:5px; }
+.toast {
+  background:rgba(9,13,26,.98); border:1px solid var(--border); border-radius:6px;
+  padding:7px 12px; font-size:12px; color:var(--t1); display:flex; align-items:center; gap:7px;
+  box-shadow:0 2px 14px rgba(0,0,0,.5); animation:toastIn .18s ease;
+  pointer-events:none;
+}
+.toast.success { border-left:3px solid var(--green); }
+.toast.error   { border-left:3px solid var(--red); }
+.toast.info    { border-left:3px solid var(--cyan); }
+.toast.warn    { border-left:3px solid var(--amber); }
+@keyframes toastIn { from{opacity:0;transform:translateX(8px)} to{opacity:1;transform:none} }
+
+/* ── INFO PILL ── */
+.info-pill {
+  display:inline-flex; align-items:center; gap:4px; padding:2px 8px;
+  border-radius:20px; font-family:var(--mono); font-size:8px; font-weight:700;
+}
+.info-pill.green { background:rgba(0,255,180,.1); color:var(--green); border:1px solid rgba(0,255,180,.2); }
+.info-pill.red   { background:rgba(255,56,96,.1);  color:var(--red);   border:1px solid rgba(255,56,96,.2); }
+.info-pill.amber { background:rgba(245,166,35,.1); color:var(--amber); border:1px solid rgba(245,166,35,.2); }
+
+/* ── REFRESH BAR ── */
+.refresh-bar-wrap { position:relative; height:2px; background:rgba(255,255,255,.05); border-radius:1px; margin-top:8px; }
+.refresh-bar { height:100%; border-radius:1px; background:linear-gradient(90deg, var(--cyan), var(--green)); width:100%; }
+
+/* ── DASHBOARD LIVE METRICS ── */
+.metric-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:6px 0; border-bottom:1px solid rgba(255,255,255,.04);
+  font-size:12px;
+}
+.metric-row:last-child { border-bottom:none; }
+.metric-key { color:var(--t2); font-family:var(--mono); font-size:10px; }
+.metric-val { color:var(--green); font-family:var(--mono); font-size:11px; font-weight:700; }
+.metric-val.red { color:var(--red); }
+.metric-val.amber { color:var(--amber); }
+</style>
+</head>
+<body>
+
+<!-- ══ INFO OVERLAY (compartido) ══ -->
+<div id="info-overlay" class="info-overlay" onclick="closeInfoOverlay(event)">
+  <div class="info-box">
+    <button class="info-close" onclick="closeInfoOverlay()">×</button>
+    <h3 id="info-title">Información</h3>
+    <div id="info-content"></div>
+  </div>
+</div>
+
+<!-- ══ LOCK SCREEN ══ -->
+<div id="lock-screen">
+  <div class="lock-wrap">
+    <div class="lock-icon">🔐</div>
+    <div class="lock-title">Admin Access</div>
+    <div class="lock-sub">SNIPER ALERT — RESTRICTED AREA</div>
+    <input class="lock-input" type="password" id="lock-input" placeholder="••••••••" maxlength="64"
+      onkeydown="if(event.key==='Enter') checkPassword()">
+    <button class="lock-btn" onclick="checkPassword()">INGRESAR</button>
+    <div class="lock-err" id="lock-err"></div>
+  </div>
+</div>
+
+<!-- ══ ADMIN APP ══ -->
+<div id="admin-app">
+
+  <div class="adm-header">
+    <div class="adm-brand">
+      <div class="adm-brand-icon">⚡</div>
+      <span class="adm-brand-name">Sniper Alert</span>
+      <span class="adm-brand-badge">GOD MODE</span>
+    </div>
+    <div class="adm-hdr-right">
+      <div class="live-indicator">
+        <div class="live-dot dead" id="live-dot"></div>
+        <span id="live-label">OFFLINE</span>
+      </div>
+      <button class="win-btn min" onclick="window.sniperAPI?.minimizeWindow()">−</button>
+      <button class="win-btn cls" onclick="window.sniperAPI?.closeWindow()">×</button>
+    </div>
+  </div>
+
+  <div class="adm-body">
+
+    <!-- SIDEBAR -->
+    <div class="adm-sidebar">
+      <div class="nav-section">Monitor</div>
+      <div class="nav-item active" onclick="showTab('market',this)">
+        <span class="nav-icon">📊</span> Mercado en Vivo
+      </div>
+      <div class="nav-item" onclick="showTab('dashboard',this)">
+        <span class="nav-icon">🖥️</span> Dashboard
+      </div>
+      <div class="nav-item" onclick="showTab('alertas',this)">
+        <span class="nav-icon">🔔</span> Alertas
+        <span class="nav-badge" id="nb-alerts">0</span>
+      </div>
+      <div class="nav-item" onclick="showTab('alert-log',this)">
+        <span class="nav-icon">📋</span> Historial
+        <span class="nav-badge amber" id="nb-log">0</span>
+      </div>
+      <div class="nav-section">Configuración</div>
+      <div class="nav-item" onclick="showTab('audio',this)">
+        <span class="nav-icon">🎵</span> Sonido
+      </div>
+      <div class="nav-item" onclick="showTab('proveedor',this)">
+        <span class="nav-icon">📡</span> Proveedor
+      </div>
+      <div class="nav-item" onclick="showTab('notif',this)">
+        <span class="nav-icon">💬</span> Notificaciones
+      </div>
+      <div class="nav-item" onclick="showTab('cooldown',this)">
+        <span class="nav-icon">⏱️</span> Cooldown
+      </div>
+      <div class="nav-section">Sistema</div>
+      <div class="nav-item" onclick="showTab('logs',this)">
+        <span class="nav-icon">📜</span> Logs
+      </div>
+      <div class="nav-item" onclick="showTab('seguridad',this)">
+        <span class="nav-icon">🔑</span> Seguridad
+      </div>
+      <div class="nav-item" onclick="showTab('acerca',this)">
+        <span class="nav-icon">ℹ️</span> Acerca de
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="adm-main">
+
+      <!-- ═══ MERCADO EN VIVO ═══ -->
+      <div class="tab-page active" id="tab-market">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Mercado en Vivo</div>
+            <div class="page-sub">PRECIOS Y VOLÚMENES EN TIEMPO REAL · AUTO-REFRESH</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-ghost" style="font-size:10px;padding:4px 10px" onclick="forceRefresh()">↺ Actualizar</button>
+            <select class="f-select" id="mkt-sort" style="font-size:9px;min-width:110px" onchange="renderMarketTable()">
+              <option value="default">Orden original</option>
+              <option value="price-desc">Precio ↓</option>
+              <option value="price-asc">Precio ↑</option>
+              <option value="chg-desc">Cambio ↓</option>
+              <option value="chg-asc">Cambio ↑</option>
+              <option value="vol-desc">Volumen ↓</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card" style="padding:12px 14px">
+          <div class="refresh-bar-wrap"><div class="refresh-bar" id="refresh-bar"></div></div>
+          <div class="market-table-wrap" style="margin-top:10px">
+            <table class="market-table" id="market-table">
+              <thead>
+                <tr>
+                  <th onclick="sortBy('name')">Token</th>
+                  <th onclick="sortBy('price')" style="text-align:right">Precio</th>
+                  <th onclick="sortBy('chg')"   style="text-align:right">24h %</th>
+                  <th>Rango 24h</th>
+                  <th onclick="sortBy('vol')">Volumen</th>
+                  <th>Alertas</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="market-tbody">
+                <tr><td colspan="7" style="text-align:center;padding:20px;font-family:var(--mono);font-size:10px;color:var(--t3)">
+                  Conectando con el mercado…
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Alertas de Volumen con descripción clara -->
+        <div class="card">
+          <div class="card-title">
+            <span class="ct-icon">📣</span>Alertas de Volumen Inusual
+            <button class="btn-info" onclick="showInfo('volumen')">ℹ Info</button>
+          </div>
+          <p style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:14px;padding:10px;background:rgba(0,217,255,.04);border-radius:6px;border-left:3px solid var(--cyan)">
+            Esta función detecta automáticamente cuando el volumen de trading de una criptomoneda supera en N veces su promedio histórico reciente. 
+            Un volumen inusualmente alto puede indicar movimientos importantes del mercado, noticias relevantes o actividad institucional.
+            Al configurar el multiplicador, defines cuánto tiene que superar el promedio para que se genere una alerta.
+          </p>
+          <div class="row">
+            <div class="row-info">
+              <div class="row-label">Multiplicador de disparo</div>
+              <div class="row-sub">Alerta cuando el volumen actual ≥ N × el promedio histórico.<br>Ej: con 5× — solo alerta si el volumen es 5 veces mayor de lo normal.</div>
+            </div>
+            <div class="row-ctrl">
+              <div class="vol-multiplier-grid">
+                <button class="vol-mult-btn" data-mult="2"  onclick="setVolMultiplier(2)">2×</button>
+                <button class="vol-mult-btn" data-mult="3"  onclick="setVolMultiplier(3)">3×</button>
+                <button class="vol-mult-btn selected" data-mult="5"  onclick="setVolMultiplier(5)">5×</button>
+                <button class="vol-mult-btn" data-mult="10" onclick="setVolMultiplier(10)">10×</button>
+                <button class="vol-mult-btn" data-mult="20" onclick="setVolMultiplier(20)">20×</button>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-info">
+              <div class="row-label">Alerta de volumen global</div>
+              <div class="row-sub">
+                Cuando está <strong style="color:var(--green)">activado</strong>: el sistema monitorea el volumen de TODAS las monedas en tu lista y genera una notificación cuando alguna supera el multiplicador configurado.<br>
+                Cuando está <strong style="color:var(--red)">desactivado</strong>: el sistema ignora el volumen y no genera alertas por este criterio.
+              </div>
+            </div>
+            <div class="row-ctrl">
+              <label class="toggle">
+                <input type="checkbox" id="vol-alert-enabled" checked onchange="saveVolAlertConfig()">
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+          </div>
+          <div id="vol-status-display" style="margin-top:10px;font-family:var(--mono);font-size:9px;color:var(--t3);padding:8px;background:rgba(0,0,0,.2);border-radius:6px">
+            Multiplicador activo: <span id="vol-mult-display" style="color:var(--amber);font-weight:700">5×</span>
+            — alerta cuando el volumen supere 5 veces el promedio histórico
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ DASHBOARD ═══ -->
+      <div class="tab-page" id="tab-dashboard">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Dashboard</div>
+            <div class="page-sub">MÉTRICAS EN TIEMPO REAL DEL SISTEMA</div>
+          </div>
+          <button class="btn btn-ghost" style="font-size:10px;padding:4px 10px" onclick="refreshDashboard()">↺ Actualizar</button>
+        </div>
+
+        <!-- Métricas dinámicas principales -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-val" id="stat-coins">—</div>
+            <div class="stat-label">Monedas activas</div>
+          </div>
+          <div class="stat-card amber">
+            <div class="stat-val" id="stat-alerts">—</div>
+            <div class="stat-label">Alertas config.</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-val" id="stat-triggered">—</div>
+            <div class="stat-label">Disparadas (sesión)</div>
+          </div>
+          <div class="stat-card cyan">
+            <div class="stat-val" id="stat-provider">—</div>
+            <div class="stat-label">Proveedor</div>
+          </div>
+          <div class="stat-card violet">
+            <div class="stat-val" id="stat-vol-spikes">—</div>
+            <div class="stat-label">Spikes vol.</div>
+          </div>
+        </div>
+
+        <!-- Métricas del sistema en vivo -->
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">📡</span>Estado del sistema en vivo</div>
+          <div class="metric-row">
+            <span class="metric-key">UPTIME</span>
+            <span class="metric-val" id="m-uptime">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-key">ÚLTIMA ACTUALIZACIÓN</span>
+            <span class="metric-val" id="m-last-refresh">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-key">INTERVALO REFRESH</span>
+            <span class="metric-val" id="m-interval">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-key">ALERTAS PRECIO ACTIVAS</span>
+            <span class="metric-val" id="m-price-alerts">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-key">ALERTAS % ACTIVAS</span>
+            <span class="metric-val" id="m-pct-alerts">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-key">SUPERTREND 15M</span>
+            <span class="metric-val" id="m-st-status">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-key">VOLUMEN GLOBAL</span>
+            <span class="metric-val" id="m-vol-enabled">—</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">⚙️</span>Configuración rápida</div>
+          <div class="row">
+            <div class="row-info"><div class="row-label">Intervalo de actualización</div></div>
+            <div class="row-ctrl">
+              <select class="f-select" id="q-interval" onchange="quickSet('refreshInterval', parseInt(this.value))">
+                <option value="3000">3 seg (mínimo seguro)</option>
+                <option value="5000">5 seg</option>
+                <option value="10000">10 seg</option>
+                <option value="15000">15 seg</option>
+                <option value="30000">30 seg</option>
+                <option value="60000">1 min</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-info"><div class="row-label">Siempre encima</div></div>
+            <div class="row-ctrl"><label class="toggle"><input type="checkbox" id="q-top" onchange="quickSet('alwaysOnTop',this.checked);window.sniperAPI?.setAlwaysOnTop(this.checked)"><span class="toggle-track"></span></label></div>
+          </div>
+          <div class="row">
+            <div class="row-info"><div class="row-label">Sonido de alertas</div></div>
+            <div class="row-ctrl"><label class="toggle"><input type="checkbox" id="q-sound" onchange="quickSet('soundEnabled',this.checked)"><span class="toggle-track"></span></label></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">📡</span>Estado de proveedores</div>
+          <div class="prov-row"><span class="prov-name">Binance</span><span class="prov-badge"><span class="prov-led ok"></span>OPERATIVO</span></div>
+          <div class="prov-row"><span class="prov-name">Kraken</span><span class="prov-badge"><span class="prov-led ok"></span>OPERATIVO</span></div>
+          <div class="prov-row"><span class="prov-name">CoinGecko</span><span class="prov-badge"><span class="prov-led ok"></span>OPERATIVO</span></div>
+          <div class="prov-row"><span class="prov-name">CoinPaprika</span><span class="prov-badge"><span class="prov-led ok"></span>OPERATIVO</span></div>
+        </div>
+      </div>
+
+      <!-- ═══ ALERTAS ═══ -->
+      <div class="tab-page" id="tab-alertas">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Gestión de Alertas</div>
+            <div class="page-sub">TODAS LAS ALERTAS CONFIGURADAS</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">🔔</span>Alertas activas</div>
+          <div style="overflow-x:auto">
+            <table class="market-table" id="alerts-table">
+              <thead><tr><th>TOKEN</th><th>PRECIO</th><th>SUBIDA</th><th>BAJADA</th><th>VOLUMEN</th><th>ESTADO</th><th>ACCIONES</th></tr></thead>
+              <tbody id="alerts-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">⚡</span>Acciones masivas</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;padding:4px 0">
+            <button class="btn btn-ghost" onclick="clearAllAlerts()">🗑 Eliminar todas</button>
+            <button class="btn btn-ghost" onclick="resetCooldowns()">♻️ Resetear cooldowns</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">🔧</span>Parámetros globales</div>
+          <div class="row">
+            <div class="row-info"><div class="row-label">Repeticiones de alarma</div></div>
+            <div class="row-ctrl">
+              <select class="f-select" id="a-repeat" onchange="quickSet('alarmRepeat',parseInt(this.value))">
+                <option value="1">1 vez</option>
+                <option value="3">3 veces</option>
+                <option value="5">5 veces</option>
+                <option value="10">10 veces</option>
+                <option value="0">Continua</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-info">
+              <div class="row-label">Cooldown entre alertas (seg)</div>
+              <div class="row-sub">Tiempo mínimo entre dos alertas del mismo tipo para el mismo símbolo.</div>
+            </div>
+            <div class="row-ctrl"><input class="f-input w80" type="number" id="a-cooldown" min="10" max="3600" placeholder="120" onchange="setCooldown(this.value)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ HISTORIAL DE ALERTAS ═══ -->
+      <div class="tab-page" id="tab-alert-log">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Historial de Alertas</div>
+            <div class="page-sub">REGISTRO DE DISPAROS EN ESTA SESIÓN</div>
+          </div>
+          <button class="btn btn-ghost" onclick="clearAlertLog()">🗑 Limpiar</button>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">📋</span>Eventos recientes</div>
+          <div class="alert-log" id="alert-log-list">
+            <div class="ale-empty">Sin eventos aún en esta sesión</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ AUDIO ═══ -->
+      <div class="tab-page" id="tab-audio">
+        <div class="page-header"><div><div class="page-title">Sonido & Ringtone</div><div class="page-sub">PERSONALIZA EL SONIDO DE ALERTA</div></div></div>
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">📁</span>Ringtone personalizado</div>
+          <p style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:10px">
+            Sube tu propio archivo de audio para que suene al dispararse una alerta. Formatos compatibles: MP3, WAV, OGG, M4A.
+          </p>
+          <div class="audio-drop-zone" id="audio-drop-zone" onclick="document.getElementById('audio-file-input').click()">
+            <div class="adz-icon">🎵</div>
+            <div class="adz-text">Clic para seleccionar · MP3, WAV, OGG, M4A</div>
+            <input type="file" id="audio-file-input" accept="audio/*" style="display:none" onchange="handleAudioFile(this)">
+          </div>
+          <div class="audio-file-name" id="audio-file-name">📎 —</div>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button class="btn btn-green" id="btn-test-custom" onclick="testCustomAudio()" style="display:none">▶ Probar</button>
+            <button class="btn btn-ghost" id="btn-clear-audio" onclick="clearCustomAudio()" style="display:none">✕ Quitar</button>
+            <button class="btn btn-ghost" onclick="saveAudioSetting()">💾 Guardar</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">🔊</span>Sintetizador incorporado</div>
+          <p style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:12px">
+            Si no tienes un archivo de audio, el sistema puede generar un tono sintético. Ajusta la forma de onda, frecuencias y volumen para personalizar el sonido.
+          </p>
+          <div class="row">
+            <div class="row-info"><div class="row-label">Forma de onda</div><div class="row-sub">Define el timbre del tono: Sine = suave, Square = agudo, Sawtooth = intenso.</div></div>
+            <div class="row-ctrl">
+              <select class="f-select" id="s-waveform" onchange="updateBeepConfig()">
+                <option value="sine">Sine (suave)</option>
+                <option value="square">Square (agudo)</option>
+                <option value="triangle">Triangle (medio)</option>
+                <option value="sawtooth">Sawtooth (intenso)</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-info"><div class="row-label">Frecuencia nota 1 (Hz)</div></div>
+            <div class="row-ctrl"><input class="f-input w80" type="number" id="s-freq1" value="1047" min="100" max="4000" onchange="updateBeepConfig()"></div>
+          </div>
+          <div class="row">
+            <div class="row-info"><div class="row-label">Frecuencia nota 2 (Hz)</div></div>
+            <div class="row-ctrl"><input class="f-input w80" type="number" id="s-freq2" value="880" min="100" max="4000" onchange="updateBeepConfig()"></div>
+          </div>
+          <div class="row">
+            <div class="row-info"><div class="row-label">Volumen</div></div>
+            <div class="row-ctrl">
+              <div style="display:flex;align-items:center;gap:8px">
+                <input class="f-range" type="range" id="s-volume" min="0.05" max="1" step="0.05" value="0.3" oninput="document.getElementById('s-vol-val').textContent=Math.round(this.value*100)+'%';updateBeepConfig()">
+                <span style="font-family:var(--mono);font-size:10px;color:var(--green);min-width:36px" id="s-vol-val">30%</span>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn btn-green" onclick="testBeep()">▶ Probar</button>
+            <button class="btn btn-ghost" onclick="resetBeepDefaults()">↺ Defaults</button>
+            <button class="btn btn-ghost" onclick="saveAudioSetting()">💾 Guardar</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">🎚️</span>Fuente de sonido</div>
+          <div class="row">
+            <div class="row-info">
+              <div class="row-label">Qué usar al disparar</div>
+              <div class="row-sub">Elige si quieres el beep sintético o tu archivo personalizado.</div>
+            </div>
+            <div class="row-ctrl">
+              <select class="f-select" id="s-source" onchange="saveSoundSource()">
+                <option value="beep">Beep sintetizado</option>
+                <option value="custom">Archivo personalizado</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ PROVEEDOR ═══ -->
+      <div class="tab-page" id="tab-proveedor">
+        <div class="page-header"><div><div class="page-title">Proveedor de Datos</div><div class="page-sub">FUENTE DE PRECIOS EN TIEMPO REAL</div></div></div>
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">📡</span>Proveedor activo</div>
+          <p style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:14px">
+            El proveedor es la fuente de datos de precios que usa Sniper Alert. Cada proveedor tiene diferentes límites de peticiones y cobertura geográfica.
+            Si estás en una región bloqueada por Binance (ej: EE.UU.), cambia a CoinGecko o CoinPaprika que son de acceso global sin restricciones.
+          </p>
+          <div class="row">
+            <div class="row-info">
+              <div class="row-label">Fuente principal</div>
+              <div class="row-sub">
+                <b style="color:var(--amber)">Binance</b>: más rápido, datos directos. Regional (bloqueado en algunos países).<br>
+                <b style="color:var(--green)">Kraken / CoinGecko / CoinPaprika</b>: acceso global, sin restricciones geográficas.
+              </div>
+            </div>
+            <div class="row-ctrl">
+              <select class="f-select" id="p-provider" onchange="setProvider(this.value)">
+                <option value="binance">Binance</option>
+                <option value="kraken">Kraken</option>
+                <option value="coingecko">CoinGecko</option>
+                <option value="coinpaprika">CoinPaprika</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-info">
+              <div class="row-label">Intervalo de actualización</div>
+              <div class="row-sub">
+                Cada cuánto tiempo el sistema pide nuevos precios.<br>
+                ⚠️ Las APIs públicas tienen límites: mínimo recomendado 3s (Binance), 5s (CoinGecko).
+              </div>
+            </div>
+            <div class="row-ctrl">
+              <select class="f-select" id="p-interval" onchange="quickSet('refreshInterval',parseInt(this.value))">
+                <option value="3000">3 seg (mínimo)</option>
+                <option value="5000">5 seg</option>
+                <option value="10000">10 seg</option>
+                <option value="15000">15 seg</option>
+                <option value="30000">30 seg</option>
+                <option value="60000">1 min</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ NOTIFICACIONES ═══ -->
+      <div class="tab-page" id="tab-notif">
+        <div class="page-header"><div><div class="page-title">Notificaciones</div><div class="page-sub">CONFIGURA CÓMO Y CUÁNDO TE AVISA EL SISTEMA</div></div></div>
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">💬</span>Canales de aviso</div>
+          <p style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:14px;padding:10px;background:rgba(0,217,255,.04);border-radius:6px;border-left:3px solid var(--cyan)">
+            Cuando se cumple una condición de alerta, el sistema puede avisarte por varios canales simultáneamente. Activa o desactiva cada uno según tus preferencias.
+          </p>
+
+          <div class="row">
+            <div class="row-info">
+              <div class="row-label">Notificaciones del sistema operativo (SO)</div>
+              <div class="row-sub">Muestra una notificación emergente nativa de Windows/Mac/Linux, incluso cuando la ventana de Sniper Alert está minimizada o en segundo plano. Es el canal más visible.</div>
+            </div>
+            <div class="row-ctrl">
+              <label class="toggle">
+                <input type="checkbox" id="n-os-notif" checked onchange="quickSet('osNotifications',this.checked)">
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="row-info">
+              <div class="row-label">Banner dentro de la aplicación</div>
+              <div class="row-sub">Muestra un banner de alerta directamente en la interfaz principal de Sniper Alert con el detalle de la señal (precio de entrada, símbolo, tipo de alerta). Complementa la notificación del SO.</div>
+            </div>
+            <div class="row-ctrl">
+              <label class="toggle">
+                <input type="checkbox" id="n-iaa" checked onchange="quickSet('inAppAlert',this.checked)">
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="row-info">
+              <div class="row-label">Flash de tarjeta</div>
+              <div class="row-sub">Hace parpadear en rojo la tarjeta de la criptomoneda que disparó la alerta. Útil para identificar visualmente qué moneda está activa en ese momento. El parpadeo dura 30 segundos.</div>
+            </div>
+            <div class="row-ctrl">
+              <label class="toggle">
+                <input type="checkbox" id="n-flash" checked onchange="quickSet('cardFlash',this.checked)">
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="row-info">
+              <div class="row-label">Duración del flash (segundos)</div>
+              <div class="row-sub">Cuántos segundos parpadea la tarjeta tras una alerta. Valor mínimo: 5s. Máximo: 300s (5 minutos).</div>
+            </div>
+            <div class="row-ctrl">
+              <input class="f-input w80" type="number" id="n-flash-dur" value="30" min="5" max="300" onchange="quickSet('flashDuration',parseInt(this.value)*1000)">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ COOLDOWN ═══ -->
+      <div class="tab-page" id="tab-cooldown">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Cooldown & Límites</div>
+            <div class="page-sub">CONTROL DE FRECUENCIA DE ALERTAS</div>
+          </div>
+          <button class="btn-info" onclick="showInfo('cooldown')">ℹ ¿Qué es el Cooldown?</button>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">⏱️</span>Cooldown global</div>
+          <p style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:14px;padding:10px;background:rgba(0,217,255,.04);border-radius:6px;border-left:3px solid var(--cyan)">
+            El <strong style="color:var(--green)">Cooldown</strong> es el tiempo mínimo de espera entre dos alertas consecutivas del mismo tipo para el mismo símbolo.
+            Por ejemplo, con un cooldown de 2 minutos: si BTC dispara una alerta de precio a las 10:00, la próxima alerta de precio para BTC no puede ocurrir antes de las 10:02, 
+            aunque el precio siga cumpliendo la condición. Esto evita que el sistema te bombardee con alertas repetidas.
+          </p>
+          <div class="row">
+            <div class="row-info">
+              <div class="row-label">Tiempo mínimo entre disparos (segundos)</div>
+              <div class="row-sub">Aplica por símbolo y por tipo de alerta (precio, subida %, bajada %, volumen) de forma independiente.</div>
+            </div>
+            <div class="row-ctrl">
+              <input class="f-input w80" type="number" id="cd-global" min="10" max="86400" value="120" onchange="setCooldownMs(parseInt(this.value)*1000)">
+            </div>
+          </div>
+          <div class="cooldown-visual">
+            <span>⏱️</span>
+            <span id="cd-display" style="color:var(--green)">2 minutos entre disparos del mismo tipo</span>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-amber" onclick="resetCooldowns()">♻️ Resetear todos los cooldowns activos</button>
+          </div>
+          <div style="margin-top:10px;font-family:var(--mono);font-size:9px;color:var(--t3)">
+            ℹ️ El Supertrend tiene su propio cooldown fijo de 4 horas por señal/símbolo, independiente de este valor.
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ LOGS ═══ -->
+      <div class="tab-page" id="tab-logs">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Logs del Sistema</div>
+            <div class="page-sub">REGISTRO TÉCNICO DE EVENTOS</div>
+          </div>
+          <button class="btn-info" onclick="showInfo('logs')">ℹ ¿Qué son los Logs?</button>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">📜</span>Log en vivo</div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+            <button class="btn btn-ghost" onclick="refreshLogs()">↺ Actualizar</button>
+            <button class="btn btn-ghost" onclick="copyLogs()">📋 Copiar todo</button>
+            <button class="btn btn-red" onclick="clearLogs()">🗑 Limpiar visor</button>
+            <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+              <select class="f-select" id="log-filter" onchange="filterLogs()" style="min-width:80px;font-size:9px">
+                <option value="ALL">Todos</option>
+                <option value="INFO">INFO</option>
+                <option value="WARN">WARN</option>
+                <option value="ERROR">ERROR</option>
+                <option value="ALERT">ALERT</option>
+              </select>
+            </div>
+          </div>
+          <div class="log-viewer" id="log-viewer">
+            <div class="log-line"><span class="log-ts">—</span><span class="log-level INFO">INFO</span><span class="log-msg">Conectando…</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">📂</span>Ruta del archivo de log</div>
+          <p style="font-size:11px;color:var(--t2);margin-bottom:8px">Este es el archivo donde se guardan todos los eventos del sistema de forma permanente. Puedes abrirlo con cualquier editor de texto.</p>
+          <div id="log-path" style="font-family:var(--mono);font-size:10px;color:var(--green);background:rgba(0,0,0,.3);padding:8px 10px;border-radius:6px;word-break:break-all;border:1px solid var(--border)">
+            Cargando…
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SEGURIDAD ═══ -->
+      <div class="tab-page" id="tab-seguridad">
+        <div class="page-header"><div><div class="page-title">Seguridad</div><div class="page-sub">CONTRASEÑA DEL PANEL ADMINISTRATIVO</div></div></div>
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">🔑</span>Cambiar contraseña</div>
+          <p style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:14px">
+            La contraseña protege el acceso a este panel administrativo. La contraseña por defecto es <code style="color:var(--green);background:rgba(0,255,180,.08);padding:1px 5px;border-radius:3px">12345</code>.
+            Se recomienda cambiarla si compartes el equipo con otras personas.
+          </p>
+          <div class="row">
+            <div class="row-info"><div class="row-label">Contraseña actual</div></div>
+            <div class="row-ctrl"><input class="f-input w180" type="password" id="sec-old" placeholder="Contraseña actual"></div>
+          </div>
+          <div class="row">
+            <div class="row-info"><div class="row-label">Nueva contraseña</div></div>
+            <div class="row-ctrl"><input class="f-input w180" type="password" id="sec-new" placeholder="Mínimo 4 caracteres"></div>
+          </div>
+          <div class="row">
+            <div class="row-info"><div class="row-label">Confirmar nueva</div></div>
+            <div class="row-ctrl"><input class="f-input w180" type="password" id="sec-confirm" placeholder="Repetir"></div>
+          </div>
+          <div style="margin-top:12px">
+            <button class="btn btn-green" onclick="changePassword()">🔑 Cambiar contraseña</button>
+          </div>
+          <div id="sec-msg" style="font-family:var(--mono);font-size:10px;margin-top:8px;height:14px"></div>
+        </div>
+      </div>
+
+      <!-- ═══ ACERCA DE ═══ -->
+      <div class="tab-page" id="tab-acerca">
+        <div class="page-header"><div><div class="page-title">Acerca de</div><div class="page-sub">INFORMACIÓN DEL SISTEMA</div></div></div>
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">📦</span>Información</div>
+          <div class="about-grid">
+            <div class="about-item"><div class="about-key">Versión</div><div class="about-val" id="ab-version">—</div></div>
+            <div class="about-item"><div class="about-key">Plataforma</div><div class="about-val" id="ab-platform">—</div></div>
+            <div class="about-item"><div class="about-key">Proveedor</div><div class="about-val" id="ab-provider">—</div></div>
+            <div class="about-item"><div class="about-key">Monedas</div><div class="about-val" id="ab-coins">—</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">⚡</span>Acciones de sistema</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;padding:4px 0">
+            <button class="btn btn-amber" onclick="exportConfig()">📤 Exportar config</button>
+            <button class="btn btn-ghost" onclick="importConfig()">📥 Importar config</button>
+            <button class="btn btn-red" onclick="factoryReset()">⚠️ Restaurar fábrica</button>
+          </div>
+          <p style="font-family:var(--mono);font-size:9px;color:var(--t3);margin-top:8px">
+            ADVERTENCIA: Restaurar fábrica elimina todas las alertas y configuraciones.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">🔗</span>Proyecto</div>
+          <p style="font-size:12px;color:var(--t2);line-height:1.7">
+            <strong>Sniper Alert</strong> — Monitor de precios cripto local.<br>
+            Autor: CyberSecureAID · Licencia: MIT<br>
+            <span style="color:var(--green);font-family:var(--mono);font-size:10px">github.com/CyberSecureAID/sniper-alert</span>
+          </p>
+        </div>
+      </div>
+
+    </div><!-- /adm-main -->
+  </div><!-- /adm-body -->
+</div><!-- /admin-app -->
+
+<div id="toast-zone"></div>
+
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════
+// INFO OVERLAY — contenido de ayuda por sección
+// ══════════════════════════════════════════════
+const INFO_CONTENT = {
+  volumen: {
+    title: '📣 Alertas de Volumen Inusual — ¿Cómo funciona?',
+    html: `
+      <p>Esta función analiza el volumen de trading de cada criptomoneda en tiempo real y lo compara con el promedio histórico reciente de la misma sesión.</p>
+      <p><strong style="color:#00ffb4">¿Para qué sirve?</strong> Un volumen inusualmente alto suele preceder a movimientos de precio importantes. Traders institucionales, noticias, o eventos del mercado generan picos de volumen antes de que el precio reaccione.</p>
+      <p><strong style="color:#00ffb4">¿Cómo usarlo?</strong></p>
+      <ul>
+        <li>Configura el multiplicador según tu estrategia: <b>2×</b> es muy sensible (muchas alertas), <b>10×</b> solo captura eventos extraordinarios.</li>
+        <li>Para trading intradiario: usa <b>3×</b> o <b>5×</b>.</li>
+        <li>Para detectar eventos macro: usa <b>10×</b> o <b>20×</b>.</li>
+        <li>Si recibes demasiadas alertas, sube el multiplicador. Si recibes pocas, bájalo.</li>
+      </ul>
+      <p>Las alertas de volumen se muestran en el historial (sección "Historial") con la etiqueta <span style="background:rgba(245,166,35,.2);color:#f5a623;padding:1px 5px;border-radius:3px;font-size:10px">VOL</span>.</p>
+    `
+  },
+  cooldown: {
+    title: '⏱️ Cooldown — ¿Qué es y por qué existe?',
+    html: `
+      <p>El <strong style="color:#00ffb4">Cooldown</strong> es un mecanismo anti-spam que evita que el sistema te envíe la misma alerta repetidamente en un corto período de tiempo.</p>
+      <p><strong style="color:#00ffb4">¿Por qué es necesario?</strong> Sin cooldown, si el precio de BTC está exactamente en tu precio objetivo, el sistema generaría una alerta en CADA actualización (cada 5 segundos), inundándote de notificaciones idénticas.</p>
+      <p><strong style="color:#00ffb4">¿Cómo funciona?</strong></p>
+      <ul>
+        <li>El cooldown se aplica <b>por símbolo y por tipo de alerta</b> de forma independiente.</li>
+        <li>Si BTC dispara una alerta de precio, el cooldown solo afecta a futuras alertas de precio de BTC. ETH puede seguir disparando normalmente.</li>
+        <li>Una alerta de subida % y una de bajada % son tipos distintos: tienen cooldowns separados.</li>
+      </ul>
+      <p><strong style="color:#00ffb4">Valores recomendados:</strong></p>
+      <ul>
+        <li><b>Scalping (operativa corta):</b> 30–60 segundos</li>
+        <li><b>Intradiario:</b> 120–300 segundos (2–5 min)</li>
+        <li><b>Swing trading:</b> 1800–3600 segundos (30–60 min)</li>
+      </ul>
+      <p>El Supertrend tiene su propio cooldown fijo de 4 horas, que no se ve afectado por este valor.</p>
+    `
+  },
+  logs: {
+    title: '📜 Logs del Sistema — ¿Qué son y cómo usarlos?',
+    html: `
+      <p>Los <strong style="color:#00ffb4">logs</strong> son un registro cronológico de todo lo que hace el sistema: conexiones, alertas disparadas, errores, cambios de configuración y más.</p>
+      <p><strong style="color:#00ffb4">¿Para qué sirven?</strong></p>
+      <ul>
+        <li><b>Diagnóstico:</b> Si una alerta no se disparó cuando debía, los logs te dicen por qué.</li>
+        <li><b>Auditoría:</b> Puedes verificar exactamente cuándo y a qué precio se disparó cada señal.</li>
+        <li><b>Errores:</b> Las líneas en <span style="color:#ff3860">rojo (ERROR)</span> indican problemas de conexión o configuración.</li>
+        <li><b>Supertrend:</b> Las entradas <span style="color:#00d9ff">[ST]</span> muestran el estado del indicador de 15m (warm-up, señales, tendencia actual).</li>
+      </ul>
+      <p><strong style="color:#00ffb4">Tipos de entrada:</strong></p>
+      <ul>
+        <li><span style="color:#00ffb4">INFO</span> — Operación normal del sistema</li>
+        <li><span style="color:#f5a623">WARN</span> — Advertencia no crítica (ej: proveedor lento)</li>
+        <li><span style="color:#ff3860">ERROR</span> — Fallo que requiere atención</li>
+        <li><span style="color:#00d9ff">ALERT</span> — Señal de trading disparada</li>
+      </ul>
+      <p>El archivo de log se guarda en disco y persiste entre reinicios. El visor de arriba muestra las últimas 300 entradas.</p>
+      <p><strong style="color:#00ffb4">Tip:</strong> Usa el filtro para ver solo las alertas (<span style="color:#00d9ff">ALERT</span>) y revisar el historial de señales del sistema.</p>
+    `
+  }
+};
+
+function showInfo(key) {
+  const content = INFO_CONTENT[key];
+  if (!content) return;
+  document.getElementById('info-title').textContent   = content.title;
+  document.getElementById('info-content').innerHTML   = content.html;
+  document.getElementById('info-overlay').classList.add('open');
+}
+function closeInfoOverlay(e) {
+  if (!e || e.target === document.getElementById('info-overlay')) {
+    document.getElementById('info-overlay').classList.remove('open');
+  }
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('info-overlay').classList.remove('open');
+});
+
+// ══════════════════════════════════════════════
+// CONSTANTS & STATE
+// ══════════════════════════════════════════════
+const DEFAULT_PASS = '12345';
+const PASS_KEY     = 'adminPassword';
+
+let config           = null;
+let customAudioBlob  = null;
+let customAudioUrl   = null;
+let logLines         = [];
+let alertLogEntries  = [];
+let volAlertMultiplier = 5;
+let volAlertEnabled    = true;
+let liveTickData     = {};
+let volHistory       = {};
+let volSpikeCount    = 0;
+let refreshTimer     = null;
+let refreshInterval  = 15000;
+let refreshCountdown = null;
+let lastPrices       = {};
+let sortField        = 'default';
+let beepConfig = { waveform:'sine', freq1:1047, freq2:880, duration:300, volume:0.3, gap:420 };
+let startTime  = Date.now();
+let lastRefreshTime = null;
+
+function iconUrl(ticker) {
+  return `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${ticker.toLowerCase()}.svg`;
+}
+
+const TOKEN_META = {
+  BTCUSDT:   { ticker:'BTC',  display:'Bitcoin'   },
+  ETHUSDT:   { ticker:'ETH',  display:'Ethereum'  },
+  SOLUSDT:   { ticker:'SOL',  display:'Solana'    },
+  BNBUSDT:   { ticker:'BNB',  display:'BNB'       },
+  XRPUSDT:   { ticker:'XRP',  display:'Ripple'    },
+  DOGEUSDT:  { ticker:'DOGE', display:'Dogecoin'  },
+  ADAUSDT:   { ticker:'ADA',  display:'Cardano'   },
+  AVAXUSDT:  { ticker:'AVAX', display:'Avalanche' },
+  LINKUSDT:  { ticker:'LINK', display:'Chainlink' },
+  DOTUSDT:   { ticker:'DOT',  display:'Polkadot'  },
+  MATICUSDT: { ticker:'MATIC',display:'Polygon'   },
+  SHIBUSDT:  { ticker:'SHIB', display:'Shiba Inu' },
+};
+
+// ── Password ──
+function getStoredPassword() {
+  try { return localStorage.getItem(PASS_KEY) || DEFAULT_PASS; } catch(_) { return DEFAULT_PASS; }
+}
+function setStoredPassword(p) {
+  try { localStorage.setItem(PASS_KEY, p); } catch(_) {}
+}
+
+function checkPassword() {
+  const input = document.getElementById('lock-input');
+  const err   = document.getElementById('lock-err');
+  if (input.value === getStoredPassword()) {
+    document.getElementById('lock-screen').style.display = 'none';
+    document.getElementById('admin-app').style.display   = 'flex';
+    initAdmin();
+  } else {
+    input.classList.add('error');
+    err.textContent = '✗ Contraseña incorrecta';
+    setTimeout(() => { input.classList.remove('error'); err.textContent = ''; input.value = ''; }, 1500);
+  }
+}
+document.getElementById('lock-input').addEventListener('keydown', e => { if(e.key==='Enter') checkPassword(); });
+
+function changePassword() {
+  const old = document.getElementById('sec-old').value;
+  const nw  = document.getElementById('sec-new').value;
+  const cf  = document.getElementById('sec-confirm').value;
+  const msg = document.getElementById('sec-msg');
+  if (old !== getStoredPassword()) { msg.style.color='var(--red)'; msg.textContent='✗ Contraseña actual incorrecta'; return; }
+  if (nw.length < 4) { msg.style.color='var(--red)'; msg.textContent='✗ Mínimo 4 caracteres'; return; }
+  if (nw !== cf)     { msg.style.color='var(--red)'; msg.textContent='✗ Las contraseñas no coinciden'; return; }
+  setStoredPassword(nw);
+  msg.style.color='var(--green)'; msg.textContent='✓ Contraseña actualizada';
+  document.getElementById('sec-old').value = '';
+  document.getElementById('sec-new').value = '';
+  document.getElementById('sec-confirm').value = '';
+  toast('Contraseña cambiada', 'success');
+  setTimeout(() => msg.textContent = '', 4000);
+}
+
+// ── INIT ──
+async function initAdmin() {
+  try {
+    config = window.sniperAPI ? await window.sniperAPI.loadConfig() : getLocalConfig();
+  } catch(_) {
+    config = getLocalConfig();
+  }
+  syncAllControls();
+  loadAlertsAdmin();
+  loadLogsAdmin();
+  loadAbout();
+  updateStats();
+  loadVolAlertConfig();
+  refreshInterval = config.settings?.refreshInterval || 15000;
+  await fetchLiveData();
+  startAutoRefresh();
+  startDashboardRefresh();
+}
+
+function getLocalConfig() {
+  return {
+    tracked:[], favorites:[], alerts:{},
+    settings:{ refreshInterval:15000, alarmRepeat:3, soundEnabled:true, language:'es',
+      provider:'binance', alwaysOnTop:false, notificationCooldown:120000,
+      beepConfig:{waveform:'sine',freq1:1047,freq2:880,duration:300,volume:.3,gap:420},
+      soundSource:'beep', osNotifications:true, inAppAlert:true, cardFlash:true,
+      flashDuration:30000, bannerDuration:8000, windowBounds:{width:520,height:680}
+    }
+  };
+}
+
+// ── LIVE DATA FETCH ──
+async function fetchLiveData() {
+  const symbols = config.tracked || [];
+  if (!symbols.length) {
+    document.getElementById('market-tbody').innerHTML =
+      '<tr><td colspan="7" style="text-align:center;padding:20px;font-family:var(--mono);font-size:10px;color:var(--t3)">Sin monedas configuradas. Agrega monedas desde la app principal.</td></tr>';
+    setLiveDot(false);
+    return;
+  }
+  try {
+    let ticks = [];
+    if (window.sniperAPI) {
+      ticks = await window.sniperAPI.fetchTickers(symbols, config.settings?.provider || 'binance');
+    }
+    ticks.forEach(t => {
+      if (!volHistory[t.symbol]) volHistory[t.symbol] = [];
+      volHistory[t.symbol].push(t.volume);
+      if (volHistory[t.symbol].length > 20) volHistory[t.symbol].shift();
+      liveTickData[t.symbol] = t;
+    });
+    checkVolumeSpikes(ticks);
+    renderMarketTable();
+    setLiveDot(true);
+    lastRefreshTime = new Date();
+    updateStats();
+  } catch(err) {
+    setLiveDot(false);
+    console.error('Live data fetch failed:', err);
+  }
+}
+
+function setLiveDot(online) {
+  const dot   = document.getElementById('live-dot');
+  const label = document.getElementById('live-label');
+  if (online) {
+    dot.classList.remove('dead');
+    label.textContent = 'LIVE';
+    label.style.color = 'var(--green)';
+  } else {
+    dot.classList.add('dead');
+    label.textContent = 'OFFLINE';
+    label.style.color = 'var(--t3)';
+  }
+}
+
+function startAutoRefresh() {
+  if (refreshTimer)     clearInterval(refreshTimer);
+  if (refreshCountdown) clearInterval(refreshCountdown);
+  refreshTimer = setInterval(async () => { await fetchLiveData(); }, refreshInterval);
+  let elapsed = 0;
+  const bar = document.getElementById('refresh-bar');
+  refreshCountdown = setInterval(() => {
+    elapsed += 200;
+    const pct = Math.max(0, 100 - (elapsed / refreshInterval) * 100);
+    if (bar) bar.style.width = pct + '%';
+    if (elapsed >= refreshInterval) elapsed = 0;
+  }, 200);
+}
+
+// ── DASHBOARD DINÁMICO ──
+function startDashboardRefresh() {
+  setInterval(() => {
+    if (document.getElementById('tab-dashboard').classList.contains('active')) {
+      refreshDashboard();
+    }
+  }, 3000);
+}
+
+function refreshDashboard() {
+  const s = config.settings || {};
+
+  // Uptime
+  const uptimeSec = Math.floor((Date.now() - startTime) / 1000);
+  const h = Math.floor(uptimeSec / 3600);
+  const m = Math.floor((uptimeSec % 3600) / 60);
+  const sec = uptimeSec % 60;
+  document.getElementById('m-uptime').textContent =
+    `${h > 0 ? h+'h ' : ''}${m > 0 ? m+'m ' : ''}${sec}s`;
+
+  // Última actualización
+  document.getElementById('m-last-refresh').textContent =
+    lastRefreshTime ? lastRefreshTime.toLocaleTimeString() : '—';
+
+  // Intervalo
+  const iv = s.refreshInterval || 15000;
+  document.getElementById('m-interval').textContent = iv >= 60000 ? (iv/60000)+'min' : (iv/1000)+'s';
+
+  // Alertas precio
+  const priceAlerts = Object.values(config.alerts || {}).filter(a => (a?.price_target?.price ?? 0) > 0).length;
+  document.getElementById('m-price-alerts').textContent = priceAlerts;
+
+  // Alertas %
+  const pctAlerts = Object.values(config.alerts || {}).filter(a =>
+    (a?.percent_rise?.rise ?? 0) > 0 || (a?.percent_drop?.drop ?? 0) > 0).length;
+  document.getElementById('m-pct-alerts').textContent = pctAlerts;
+
+  // Supertrend
+  const stEl = document.getElementById('m-st-status');
+  if (window.sniperAPI?.getSupertrendStatus) {
+    window.sniperAPI.getSupertrendStatus().then(st => {
+      const symbols = Object.keys(st || {});
+      const done    = symbols.filter(k => st[k].warmUpDone).length;
+      stEl.textContent = `${done}/${symbols.length} listos`;
+      stEl.className   = 'metric-val' + (done === symbols.length ? '' : ' amber');
+    }).catch(() => { stEl.textContent = 'N/D'; });
+  } else {
+    stEl.textContent = 'N/D';
+  }
+
+  // Volumen global
+  const volEl = document.getElementById('m-vol-enabled');
+  volEl.textContent = volAlertEnabled ? `ACTIVO (${volAlertMultiplier}×)` : 'DESACTIVADO';
+  volEl.className   = 'metric-val' + (volAlertEnabled ? '' : ' red');
+
+  // Stats cards
+  updateStats();
+}
+
+async function forceRefresh() {
+  await fetchLiveData();
+  const bar = document.getElementById('refresh-bar');
+  if (bar) bar.style.width = '100%';
+}
+
+// ── VOLUME SPIKE ──
+function checkVolumeSpikes(ticks) {
+  if (!volAlertEnabled) return;
+  ticks.forEach(t => {
+    const hist = volHistory[t.symbol] || [];
+    if (hist.length < 3) return;
+    const avg = hist.slice(0, -1).reduce((a,b) => a+b, 0) / (hist.length - 1);
+    if (avg <= 0) return;
+    const ratio = t.volume / avg;
+    if (ratio >= volAlertMultiplier) {
+      volSpikeCount++;
+      const entry = {
+        time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}),
+        type: 'vol',
+        sym:  t.symbol,
+        msg:  `Volumen ${ratio.toFixed(1)}× el promedio (${fmtVol(t.volume)} vs avg ${fmtVol(avg)})`
+      };
+      addAlertLogEntry(entry);
+      window.sniperAPI?.sendNotification({
+        title: `🚨 Spike de Volumen — ${t.symbol.replace('USDT','')}`,
+        body:  `Volumen ${ratio.toFixed(1)}× mayor que el promedio`
+      });
+      toast(`Vol spike ${t.symbol.replace('USDT','')} ×${ratio.toFixed(1)}`, 'warn', 5000);
+    }
+  });
+  document.getElementById('stat-vol-spikes').textContent = volSpikeCount;
+  document.getElementById('nb-log').textContent = alertLogEntries.length;
+}
+
+function addAlertLogEntry(entry) {
+  alertLogEntries.unshift(entry);
+  if (alertLogEntries.length > 100) alertLogEntries.pop();
+  renderAlertLog();
+  document.getElementById('nb-log').textContent = alertLogEntries.length;
+}
+
+function renderAlertLog() {
+  const list = document.getElementById('alert-log-list');
+  if (!alertLogEntries.length) {
+    list.innerHTML = '<div class="ale-empty">Sin eventos aún en esta sesión</div>';
+    return;
+  }
+  list.innerHTML = alertLogEntries.map(e => `
+    <div class="alert-log-entry">
+      <span class="ale-time">${e.time}</span>
+      <span class="ale-badge ${e.type}">${e.type.toUpperCase()}</span>
+      <div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--cyan);margin-bottom:2px">${e.sym.replace('USDT','')}</div>
+        <div class="ale-msg">${e.msg}</div>
+      </div>
+    </div>`).join('');
+}
+
+function clearAlertLog() {
+  alertLogEntries = [];
+  renderAlertLog();
+  document.getElementById('nb-log').textContent = '0';
+}
+
+// ── MARKET TABLE ──
+function fmtPrice(n) {
+  if (!n) return '—';
+  if (n >= 1000) return '$' + n.toLocaleString('en-US', {maximumFractionDigits:2});
+  if (n >= 1)    return '$' + n.toFixed(4);
+  return '$' + n.toFixed(8);
+}
+function fmtVol(n) {
+  if (!n || n === 0) return '—';
+  if (n >= 1e9) return (n/1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+  return n.toFixed(0);
+}
+
+function sortBy(field) {
+  if (sortField === field + '-desc') { sortField = field + '-asc'; }
+  else { sortField = field + '-desc'; }
+  document.getElementById('mkt-sort').value = sortField;
+  renderMarketTable();
+}
+
+function renderMarketTable() {
+  const symbols = config.tracked || [];
+  if (!symbols.length) return;
+  const sortVal = document.getElementById('mkt-sort')?.value || sortField;
+  let rows = symbols.map(sym => ({ sym, tick: liveTickData[sym] || null }));
+  if (sortVal !== 'default') {
+    rows.sort((a, b) => {
+      const ta = a.tick, tb = b.tick;
+      if (!ta && !tb) return 0;
+      if (!ta) return 1;
+      if (!tb) return -1;
+      switch(sortVal) {
+        case 'price-desc': return (tb.price||0) - (ta.price||0);
+        case 'price-asc':  return (ta.price||0) - (tb.price||0);
+        case 'chg-desc':   return (tb.change24h||0) - (ta.change24h||0);
+        case 'chg-asc':    return (ta.change24h||0) - (tb.change24h||0);
+        case 'vol-desc':   return (tb.volume||0) - (ta.volume||0);
+        default:           return 0;
+      }
+    });
+  }
+  const tbody  = document.getElementById('market-tbody');
+  const maxVol = Math.max(...rows.map(r => r.tick?.volume || 0), 1);
+  tbody.innerHTML = rows.map(({sym, tick}) => {
+    const meta   = TOKEN_META[sym] || { ticker: sym.replace('USDT',''), display: sym.replace('USDT','') };
+    const ticker = meta.ticker;
+    const name   = meta.display;
+    if (!tick) {
+      return `<tr><td><div class="td-sym-wrap">
+        <img class="td-coin-img" src="${iconUrl(ticker)}" onerror="this.style.visibility='hidden'" alt="${ticker}">
+        <span class="td-sym">${ticker}</span>
+        <span style="font-size:10px;color:var(--t3)">${name}</span>
+      </div></td><td colspan="6" style="font-family:var(--mono);font-size:9px;color:var(--t3)">Sin datos</td></tr>`;
+    }
+    const up     = tick.change24h >= 0;
+    const chgCls = up ? 'up' : 'down';
+    const chgPfx = up ? '+' : '';
+    const range  = (tick.high24h || 0) - (tick.low24h || 0);
+    const pos    = range > 0 ? ((tick.price - (tick.low24h||0)) / range) * 100 : 50;
+    const posClamp = Math.max(3, Math.min(97, pos));
+    const volPct  = Math.min(100, ((tick.volume || 0) / maxVol) * 100);
+    const hist    = volHistory[sym] || [];
+    const avg     = hist.length > 1 ? hist.slice(0,-1).reduce((a,b)=>a+b,0) / (hist.length-1) : 0;
+    const volRatio = avg > 0 ? tick.volume / avg : 1;
+    const isSpike  = volAlertEnabled && volRatio >= volAlertMultiplier && hist.length >= 3;
+    const al = config.alerts?.[sym] || {};
+    const pt = al.price_target?.price || 0;
+    const ri = al.percent_rise?.rise  || 0;
+    const dr = al.percent_drop?.drop  || 0;
+    const alertChips = [
+      pt > 0 ? `<span class="mini-chip price">$${pt.toLocaleString()}</span>` : '',
+      ri > 0 ? `<span class="mini-chip rise">+${ri}%</span>` : '',
+      dr > 0 ? `<span class="mini-chip drop">-${dr}%</span>` : '',
+      volAlertEnabled ? `<span class="mini-chip vol">${volAlertMultiplier}×</span>` : '',
+    ].filter(Boolean).join('');
+    let statusHtml;
+    if (isSpike) {
+      statusHtml = `<div class="td-status"><div class="status-led alert"></div><span style="color:var(--red)">SPIKE ${volRatio.toFixed(1)}×</span></div>`;
+    } else if (Math.abs(tick.change24h) >= 5) {
+      statusHtml = `<div class="td-status"><div class="status-led warn"></div><span style="color:var(--amber)">ACTIVO</span></div>`;
+    } else {
+      statusHtml = `<div class="td-status"><div class="status-led ok"></div><span>OK</span></div>`;
+    }
+    return `<tr id="mrow-${sym}" data-sym="${sym}">
+      <td><div class="td-sym-wrap">
+        <img class="td-coin-img" src="${iconUrl(ticker)}" onerror="this.style.visibility='hidden'" alt="${ticker}">
+        <div><div class="td-sym">${ticker}</div><div style="font-size:9px;color:var(--t3);font-family:var(--mono)">${name}</div></div>
+      </div></td>
+      <td style="text-align:right">
+        <div class="td-price">${fmtPrice(tick.price)}</div>
+        <div style="font-family:var(--mono);font-size:8px;color:var(--t3)">${tick.source || ''}</div>
+      </td>
+      <td style="text-align:right"><div class="td-chg ${chgCls}">${chgPfx}${tick.change24h.toFixed(2)}%</div></td>
+      <td><div class="spark-wrap">
+        <div class="spark-label">${fmtPrice(tick.low24h)}</div>
+        <div class="spark-range"><div class="spark-pos" style="left:${posClamp}%"></div></div>
+        <div class="spark-label">${fmtPrice(tick.high24h)}</div>
+      </div></td>
+      <td><div class="vol-bar-wrap ${isSpike ? 'vol-spike' : ''}">
+        <div class="vol-bar-bg"><div class="vol-bar-fill" style="width:${volPct}%"></div></div>
+        <div>
+          <div class="vol-text">${fmtVol(tick.volume)}</div>
+          ${isSpike ? `<span class="vol-spike-badge">×${volRatio.toFixed(1)}</span>` :
+            (avg > 0 ? `<div style="font-family:var(--mono);font-size:7px;color:var(--t3)">avg ${fmtVol(avg)}</div>` : '')}
+        </div>
+      </div></td>
+      <td><div class="td-alert-chips">${alertChips || '<span class="mini-chip none">—</span>'}</div></td>
+      <td>${statusHtml}</td>
+    </tr>`;
+  }).join('');
+
+  // Animación flash precios
+  rows.forEach(({sym, tick}) => {
+    if (!tick) return;
+    const prev = lastPrices[sym];
+    if (prev !== undefined && prev !== tick.price) {
+      const row = document.getElementById(`mrow-${sym}`);
+      if (row) {
+        const cls = tick.price > prev ? 'flash-up' : 'flash-down';
+        row.classList.remove('flash-up','flash-down');
+        void row.offsetWidth;
+        row.classList.add(cls);
+        setTimeout(() => row.classList.remove(cls), 700);
+      }
+    }
+    lastPrices[sym] = tick?.price;
+  });
+}
+
+// ── VOL ALERT CONFIG ──
+function setVolMultiplier(n) {
+  volAlertMultiplier = n;
+  document.querySelectorAll('.vol-mult-btn').forEach(b => {
+    b.classList.toggle('selected', parseInt(b.dataset.mult) === n);
+  });
+  document.getElementById('vol-mult-display').textContent = n + '×';
+  document.getElementById('vol-status-display').innerHTML =
+    `Multiplicador activo: <span id="vol-mult-display" style="color:var(--amber);font-weight:700">${n}×</span>
+     — alerta cuando el volumen supere ${n} veces el promedio histórico`;
+  saveVolAlertConfig();
+  toast(`Multiplicador de volumen: ${n}×`, 'info');
+}
+
+function saveVolAlertConfig() {
+  volAlertEnabled = document.getElementById('vol-alert-enabled').checked;
+  if (!config.settings) config.settings = {};
+  config.settings.volAlertMultiplier = volAlertMultiplier;
+  config.settings.volAlertEnabled    = volAlertEnabled;
+  persistConfig();
+}
+
+function loadVolAlertConfig() {
+  const s = config.settings || {};
+  if (s.volAlertMultiplier) {
+    volAlertMultiplier = s.volAlertMultiplier;
+    document.querySelectorAll('.vol-mult-btn').forEach(b => {
+      b.classList.toggle('selected', parseInt(b.dataset.mult) === volAlertMultiplier);
+    });
+    document.getElementById('vol-mult-display').textContent = volAlertMultiplier + '×';
+  }
+  if (s.volAlertEnabled !== undefined) {
+    volAlertEnabled = s.volAlertEnabled;
+    document.getElementById('vol-alert-enabled').checked = volAlertEnabled;
+  }
+}
+
+// ── NAV TABS ──
+function showTab(name, el) {
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const page = document.getElementById('tab-' + name);
+  if (page) page.classList.add('active');
+  if (el) el.classList.add('active');
+  if (name === 'logs')      loadLogsAdmin();
+  if (name === 'alert-log') renderAlertLog();
+  if (name === 'dashboard') refreshDashboard();
+}
+
+// ── SYNC CONTROLS ──
+function syncAllControls() {
+  const s = config.settings || {};
+  setVal('q-interval', s.refreshInterval || 15000);
+  setChk('q-top',   s.alwaysOnTop || false);
+  setChk('q-sound', s.soundEnabled !== false);
+  setVal('a-repeat', s.alarmRepeat ?? 3);
+  setVal('a-cooldown', Math.round((s.notificationCooldown || 120000) / 1000));
+  setVal('p-provider', s.provider || 'binance');
+  setVal('p-interval', s.refreshInterval || 15000);
+  setChk('n-os-notif', s.osNotifications !== false);
+  setChk('n-iaa',   s.inAppAlert !== false);
+  setChk('n-flash', s.cardFlash !== false);
+  setVal('n-flash-dur', Math.round((s.flashDuration || 30000) / 1000));
+  setVal('cd-global', Math.round((s.notificationCooldown || 120000) / 1000));
+  updateCooldownDisplay(Math.round((s.notificationCooldown || 120000) / 1000));
+  setVal('s-source', s.soundSource || 'beep');
+  if (s.beepConfig) {
+    beepConfig = { ...beepConfig, ...s.beepConfig };
+    setVal('s-waveform', beepConfig.waveform);
+    setVal('s-freq1', beepConfig.freq1);
+    setVal('s-freq2', beepConfig.freq2);
+    setVal('s-volume', beepConfig.volume);
+    document.getElementById('s-vol-val').textContent = Math.round(beepConfig.volume*100)+'%';
+  }
+  if (s.customAudioName) {
+    document.getElementById('audio-file-name').style.display='block';
+    document.getElementById('audio-file-name').textContent='📎 '+s.customAudioName;
+    document.getElementById('btn-test-custom').style.display='inline-flex';
+    document.getElementById('btn-clear-audio').style.display='inline-flex';
+  }
+}
+function setVal(id, val) { const el=document.getElementById(id); if(el) el.value=String(val); }
+function setChk(id, val) { const el=document.getElementById(id); if(el) el.checked=!!val; }
+
+// ── PERSIST ──
+async function persistConfig() {
+  if (window.sniperAPI) {
+    const ok = await window.sniperAPI.saveConfig(config);
+    if (!ok) toast('Error al guardar', 'error');
+  }
+}
+
+function quickSet(key, val) {
+  if (!config.settings) config.settings = {};
+  config.settings[key] = val;
+  if (key === 'refreshInterval') {
+    refreshInterval = val;
+    setVal('q-interval', val);
+    setVal('p-interval', val);
+    startAutoRefresh();
+  }
+  if (key === 'alwaysOnTop') { setChk('q-top', val); }
+  persistConfig();
+  toast('Guardado', 'success');
+}
+
+// ── ALERTS ──
+function loadAlertsAdmin() {
+  const tbody = document.getElementById('alerts-tbody');
+  tbody.innerHTML = '';
+  const alerts = config.alerts || {};
+  let count = 0;
+  Object.entries(alerts).forEach(([sym, a]) => {
+    if (!a) return;
+    const pt = a.price_target?.price ?? 0;
+    const ri = a.percent_rise?.rise  ?? 0;
+    const dr = a.percent_drop?.drop  ?? 0;
+    if (pt <= 0 && ri <= 0 && dr <= 0) return;
+    count++;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="td-sym">${sym.replace('USDT','')}</td>
+      <td>${pt > 0 ? `<span class="mini-chip price">$${pt.toLocaleString()}</span>` : '—'}</td>
+      <td>${ri > 0 ? `<span class="mini-chip rise">+${ri}%</span>` : '—'}</td>
+      <td>${dr > 0 ? `<span class="mini-chip drop">-${dr}%</span>` : '—'}</td>
+      <td><span class="mini-chip vol">${volAlertMultiplier}×</span></td>
+      <td><span class="info-pill green">ACTIVA</span></td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-ghost" style="padding:3px 8px;font-size:10px" onclick="editAlert('${sym}')">✏️</button>
+        <button class="btn btn-red"   style="padding:3px 8px;font-size:10px" onclick="deleteAlert('${sym}')">🗑</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('nb-alerts').textContent = count;
+  document.getElementById('stat-alerts').textContent = count;
+}
+
+function editAlert(sym) {
+  const a = config.alerts[sym] || {};
+  const pt = a.price_target?.price ?? 0;
+  const ri = a.percent_rise?.rise  ?? 0;
+  const dr = a.percent_drop?.drop  ?? 0;
+  const np = parseFloat(prompt(`[${sym}] Precio objetivo ($) — 0 para desactivar:`, pt)||'0');
+  const nr = parseFloat(prompt(`[${sym}] Subida % — 0 para desactivar:`, ri)||'0');
+  const nd = parseFloat(prompt(`[${sym}] Bajada % — 0 para desactivar:`, dr)||'0');
+  if (isNaN(np)||isNaN(nr)||isNaN(nd)) return;
+  config.alerts[sym] = { price_target:{price:np}, percent_rise:{rise:nr}, percent_drop:{drop:nd} };
+  persistConfig(); loadAlertsAdmin(); renderMarketTable(); toast('Alerta actualizada', 'success');
+}
+
+function deleteAlert(sym) {
+  if (!confirm(`¿Eliminar alerta de ${sym}?`)) return;
+  config.alerts[sym] = { price_target:{price:0}, percent_rise:{rise:0}, percent_drop:{drop:0} };
+  persistConfig(); loadAlertsAdmin(); renderMarketTable(); toast('Alerta eliminada', 'info');
+}
+
+function clearAllAlerts() {
+  if (!confirm('¿Eliminar TODAS las alertas?')) return;
+  Object.keys(config.alerts).forEach(sym => {
+    config.alerts[sym] = { price_target:{price:0}, percent_rise:{rise:0}, percent_drop:{drop:0} };
+  });
+  persistConfig(); loadAlertsAdmin(); renderMarketTable(); toast('Todas las alertas eliminadas', 'info');
+}
+
+function setCooldown(secs) {
+  const ms = parseInt(secs) * 1000;
+  config.settings.notificationCooldown = ms;
+  setVal('cd-global', secs);
+  updateCooldownDisplay(secs);
+  persistConfig();
+}
+function setCooldownMs(ms) {
+  config.settings.notificationCooldown = ms;
+  const secs = Math.round(ms/1000);
+  setVal('a-cooldown', secs);
+  setVal('cd-global', secs);
+  updateCooldownDisplay(secs);
+  persistConfig();
+}
+function updateCooldownDisplay(secs) {
+  const s = parseInt(secs);
+  let txt = s + ' segundos';
+  if (s >= 3600) txt = (s/3600).toFixed(1) + ' horas';
+  else if (s >= 60) txt = Math.round(s/60) + ' minutos';
+  document.getElementById('cd-display').textContent = txt + ' entre disparos del mismo tipo';
+}
+function resetCooldowns() { toast('Cooldowns reiniciados', 'info'); }
+
+// ── PROVIDER ──
+function setProvider(id) {
+  config.settings.provider = id;
+  persistConfig();
+  fetchLiveData();
+  toast('Proveedor: ' + id, 'info');
+}
+
+// ── STATS (dinámicas) ──
+function updateStats() {
+  const tracked = (config.tracked || []).length;
+  const alerts  = Object.values(config.alerts || {}).filter(a =>
+    (a?.price_target?.price ?? 0) > 0 ||
+    (a?.percent_rise?.rise  ?? 0) > 0 ||
+    (a?.percent_drop?.drop  ?? 0) > 0).length;
+  const prov = config.settings?.provider || '—';
+  document.getElementById('stat-coins').textContent     = tracked;
+  document.getElementById('stat-alerts').textContent    = alerts;
+  document.getElementById('stat-triggered').textContent = alertLogEntries.filter(e=>e.type!=='vol').length;
+  document.getElementById('stat-provider').textContent  = prov.slice(0,3).toUpperCase();
+  document.getElementById('stat-vol-spikes').textContent = volSpikeCount;
+  document.getElementById('nb-alerts').textContent = alerts;
+
+  // Métricas detalladas del dashboard
+  const priceAlerts = Object.values(config.alerts || {}).filter(a => (a?.price_target?.price ?? 0) > 0).length;
+  const pctAlerts   = Object.values(config.alerts || {}).filter(a =>
+    (a?.percent_rise?.rise ?? 0) > 0 || (a?.percent_drop?.drop ?? 0) > 0).length;
+  const mPA = document.getElementById('m-price-alerts');
+  const mPC = document.getElementById('m-pct-alerts');
+  if (mPA) mPA.textContent = priceAlerts;
+  if (mPC) mPC.textContent = pctAlerts;
+  const mVol = document.getElementById('m-vol-enabled');
+  if (mVol) {
+    mVol.textContent = volAlertEnabled ? `ACTIVO (${volAlertMultiplier}×)` : 'DESACTIVADO';
+    mVol.className   = 'metric-val' + (volAlertEnabled ? '' : ' red');
+  }
+  const mIv = document.getElementById('m-interval');
+  if (mIv) {
+    const iv = config.settings?.refreshInterval || 15000;
+    mIv.textContent = iv >= 60000 ? (iv/60000)+'min' : (iv/1000)+'s';
+  }
+}
+
+// ── AUDIO ──
+function handleAudioFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (customAudioUrl) URL.revokeObjectURL(customAudioUrl);
+  customAudioBlob = file; customAudioUrl = URL.createObjectURL(file);
+  document.getElementById('audio-file-name').textContent   = '📎 '+file.name;
+  document.getElementById('audio-file-name').style.display = 'block';
+  document.getElementById('btn-test-custom').style.display = 'inline-flex';
+  document.getElementById('btn-clear-audio').style.display = 'inline-flex';
+  if (!config.settings) config.settings = {};
+  config.settings.customAudioName = file.name;
+  config.settings.soundSource     = 'custom';
+  setVal('s-source', 'custom');
+  toast('Archivo cargado: '+file.name, 'success');
+}
+const dropZone = document.getElementById('audio-drop-zone');
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragging'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragging'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragging');
+  const file = e.dataTransfer.files[0];
+  if (file) { const dt=new DataTransfer(); dt.items.add(file); document.getElementById('audio-file-input').files=dt.files; handleAudioFile(document.getElementById('audio-file-input')); }
+});
+function testCustomAudio() {
+  if (!customAudioUrl) { toast('No hay archivo', 'error'); return; }
+  const a = new Audio(customAudioUrl);
+  a.volume = parseFloat(document.getElementById('s-volume').value)||0.3;
+  a.play().catch(() => toast('Error al reproducir', 'error'));
+}
+function clearCustomAudio() {
+  if (customAudioUrl) URL.revokeObjectURL(customAudioUrl);
+  customAudioBlob=null; customAudioUrl=null;
+  document.getElementById('audio-file-name').style.display='none';
+  document.getElementById('btn-test-custom').style.display='none';
+  document.getElementById('btn-clear-audio').style.display='none';
+  document.getElementById('audio-file-input').value='';
+  if (config.settings) { delete config.settings.customAudioName; config.settings.soundSource='beep'; }
+  setVal('s-source','beep');
+  toast('Archivo eliminado','info');
+}
+function updateBeepConfig() {
+  beepConfig.waveform = document.getElementById('s-waveform').value;
+  beepConfig.freq1    = parseInt(document.getElementById('s-freq1').value)||1047;
+  beepConfig.freq2    = parseInt(document.getElementById('s-freq2').value)||880;
+  beepConfig.volume   = parseFloat(document.getElementById('s-volume').value)||0.3;
+}
+function resetBeepDefaults() {
+  beepConfig={waveform:'sine',freq1:1047,freq2:880,duration:300,volume:0.3,gap:420};
+  setVal('s-waveform','sine'); setVal('s-freq1',1047); setVal('s-freq2',880);
+  setVal('s-volume',0.3); document.getElementById('s-vol-val').textContent='30%';
+  toast('Defaults restaurados','info');
+}
+function testBeep() {
+  updateBeepConfig();
+  try {
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const play=(freq,when)=>{
+      const osc=ctx.createOscillator(), gain=ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type=beepConfig.waveform; osc.frequency.value=freq;
+      gain.gain.setValueAtTime(0,when);
+      gain.gain.linearRampToValueAtTime(beepConfig.volume,when+.02);
+      gain.gain.linearRampToValueAtTime(0,when+.3);
+      osc.start(when); osc.stop(when+.3);
+    };
+    play(beepConfig.freq1,ctx.currentTime);
+    play(beepConfig.freq2,ctx.currentTime+.42);
+  } catch(_) { toast('Error al reproducir','error'); }
+}
+function saveAudioSetting() {
+  updateBeepConfig();
+  config.settings.beepConfig  = {...beepConfig};
+  config.settings.soundSource = document.getElementById('s-source').value;
+  persistConfig();
+  toast('Sonido guardado','success');
+}
+function saveSoundSource() {
+  config.settings.soundSource = document.getElementById('s-source').value;
+  persistConfig();
+}
+
+// ── LOGS ──
+async function loadLogsAdmin() {
+  if (!window.sniperAPI) {
+    document.getElementById('log-viewer').innerHTML='<div class="log-line"><span class="log-msg" style="color:var(--t3)">Disponible solo dentro de la aplicación</span></div>';
+    document.getElementById('log-path').textContent='%APPDATA%\\sniper-alert\\sniper-alert.log';
+    return;
+  }
+  try {
+    const result = await window.sniperAPI.getLogs();
+    if (result?.lines) { logLines=result.lines; renderLogs(); }
+    if (result?.path)  { document.getElementById('log-path').textContent=result.path; }
+  } catch(_) {}
+}
+function renderLogs() {
+  const filter=document.getElementById('log-filter').value;
+  const viewer=document.getElementById('log-viewer');
+  const lines=filter==='ALL' ? logLines : logLines.filter(l=>l.level===filter);
+  viewer.innerHTML=lines.slice(-200).map(l=>`
+    <div class="log-line">
+      <span class="log-ts">${(l.ts||'').slice(11,19)}</span>
+      <span class="log-level ${l.level||'INFO'}">${l.level||'—'}</span>
+      <span class="log-msg">${escHtml(l.message||'')} ${l.meta?'<span style="color:var(--t3)">'+escHtml(JSON.stringify(l.meta))+'</span>':''}</span>
+    </div>`).join('')||'<div class="log-line"><span class="log-msg" style="color:var(--t3)">Sin entradas</span></div>';
+  viewer.scrollTop=viewer.scrollHeight;
+}
+function filterLogs() { renderLogs(); }
+function refreshLogs() { loadLogsAdmin(); }
+function copyLogs() {
+  const text=logLines.map(l=>`[${l.ts}] [${l.level}] ${l.message}`).join('\n');
+  navigator.clipboard.writeText(text).then(()=>toast('Copiado','success')).catch(()=>toast('Error','error'));
+}
+function clearLogs() { logLines=[]; renderLogs(); toast('Visor limpiado','info'); }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── ABOUT ──
+async function loadAbout() {
+  let ver='—';
+  if (window.sniperAPI) { try { ver=await window.sniperAPI.getVersion(); }catch(_){} }
+  document.getElementById('ab-version').textContent='v'+ver;
+  document.getElementById('ab-platform').textContent=navigator.platform||'—';
+  document.getElementById('ab-provider').textContent=config.settings?.provider||'—';
+  document.getElementById('ab-coins').textContent=(config.tracked||[]).length;
+}
+
+// ── IMPORT / EXPORT / RESET ──
+function exportConfig() {
+  const blob=new Blob([JSON.stringify(config,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='sniper-alert-config.json'; a.click();
+  toast('Configuración exportada','success');
+}
+function importConfig() {
+  const input=document.createElement('input'); input.type='file'; input.accept='.json';
+  input.onchange=async e=>{
+    const file=e.target.files[0]; if(!file) return;
+    try {
+      const parsed=JSON.parse(await file.text());
+      if(!parsed.settings) throw new Error('Formato inválido');
+      config=parsed; await persistConfig();
+      syncAllControls(); loadAlertsAdmin(); updateStats(); loadVolAlertConfig();
+      toast('Configuración importada','success');
+    } catch(err) { toast('Error: '+err.message,'error'); }
+  };
+  input.click();
+}
+function factoryReset() {
+  if(!confirm('⚠️ ¿RESTAURAR FÁBRICA? Esto eliminará TODAS las configuraciones.')) return;
+  if(!confirm('¿Estás completamente seguro?')) return;
+  config={schemaVersion:3,tracked:['BTCUSDT','ETHUSDT','SOLUSDT'],
+    favorites:['BTCUSDT','ETHUSDT','SOLUSDT'],alerts:{},
+    settings:{refreshInterval:15000,notificationCooldown:120000,alarmRepeat:3,
+      soundEnabled:true,language:'es',provider:'binance',alwaysOnTop:false,
+      windowBounds:{width:520,height:680},soundSource:'beep',
+      beepConfig:{waveform:'sine',freq1:1047,freq2:880,duration:300,volume:.3,gap:420}}};
+  persistConfig(); syncAllControls(); loadAlertsAdmin(); updateStats();
+  toast('Fábrica restaurada','info');
+}
+
+// ── TOAST ──
+function toast(msg, type='info', dur=3000) {
+  const zone=document.getElementById('toast-zone');
+  const t=document.createElement('div');
+  t.className=`toast ${type}`; t.textContent=msg;
+  zone.appendChild(t);
+  setTimeout(()=>{ t.style.animation='none'; t.style.opacity='0'; setTimeout(()=>t.remove(),200); },dur);
+}
+
+// ── BOOT ──
+document.getElementById('lock-screen').style.display='flex';
+document.getElementById('admin-app').style.display='none';
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "version": "3.0.0",
+  "releaseDate": "2025-04-03",
+  "releaseUrl": "https://github.com/CyberSecureAID/sniper-alert/releases/tag/v3.0.0",
+  "changelog": [
+    "Multi-provider architecture: CoinGecko, Binance, Kraken, CoinPaprika",
+    "Provider selector strip — switch data source with one click",
+    "CoinGecko set as default (free, global, no geo-restrictions)",
+    "Binance uses data.binance.com + api.binance.us as fallback (fixes HTTP 451)",
+    "Removed unreliable allorigins CORS proxy — Electron net module used natively",
+    "New dedicated Settings panel — all config in one place",
+    "Toggle always-on-top, sound, refresh interval from Settings",
+    "In-app notification banner with auto-dismiss",
+    "Config schema v2 with automatic migration from v1",
+    "Improved status bar with animated LED indicator"
+  ],
+  "minVersion": "1.0.0"
+}
