@@ -106,8 +106,6 @@ function makeTick(symbol, price, change24h, volume, high24h, low24h, source) {
   };
 }
 
-// Use Binance 24hr ticker which returns BOTH live price and stats in one call
-// This eliminates the price/stats desync issue
 const BINANCE_TICKER_BASE = [
   'https://api.binance.com/api/v3/ticker/24hr',
   'https://data.binance.com/api/v3/ticker/24hr',
@@ -120,7 +118,6 @@ const BINANCE_KLINE_BASE = [
   'https://api.binance.us/api/v3/klines',
 ];
 
-// Single call returns both price and stats, no desync possible
 async function fetchBinanceTicker24hr(symbol) {
   let lastErr;
   for (const base of BINANCE_TICKER_BASE) {
@@ -140,6 +137,19 @@ async function fetchBinanceTicker24hr(symbol) {
     } catch (err) { lastErr = err; }
   }
   throw lastErr || new Error('Binance fetch failed');
+}
+
+// ── FIX: dedicated lightweight price-only fetch for ADC distance ──
+// Always uses Binance regardless of selected provider, so the ADC
+// distance is calculated against the same source as the klines.
+async function fetchBinancePriceOnly(symbol) {
+  for (const base of BINANCE_TICKER_BASE) {
+    try {
+      const raw = await netGet(`${base}?symbol=${symbol}`, 4000);
+      if (raw && raw.lastPrice) return parseFloat(raw.lastPrice) || 0;
+    } catch (_) {}
+  }
+  return 0; // fallback: 0 means distance won't be sent
 }
 
 async function fetchViaBinance(symbols) {
@@ -237,8 +247,6 @@ function compareVersions(a, b) {
 
 // ═══════════════════════════════════════════════════════════════════════
 //  ADC — Algoritmo de Detección de Ciclos
-//  Supertrend con Pine Script v6 logic, Binance Spot klines
-//  Incluye cálculo de distancia porcentual a la línea ADC
 // ═══════════════════════════════════════════════════════════════════════
 const ADC_PERIOD      = 2;
 const ADC_MULT        = 19.0;
@@ -305,7 +313,10 @@ function adcProcessCandle(candle, state) {
   return { tendencia, senialCompra, senialVenta, arriba, abajo };
 }
 
-// Calculate percentage distance from current live price to ADC line
+// ── FIX: always pass binancePrice here, never provider price ──
+// Distance = (BinanceSpotPrice - BinanceADCLine) / BinanceADCLine
+// Both numerator and denominator come from the same Binance source,
+// matching what TradingView shows.
 function calcAdcDistance(price, state) {
   if (!state.warmUpDone || !price || price <= 0) return null;
 
@@ -318,7 +329,6 @@ function calcAdcDistance(price, state) {
 
   if (adcLine === null || adcLine <= 0) return null;
 
-  // Distance: positive = price above ADC line, negative = price below ADC line
   const distance = ((price - adcLine) / adcLine) * 100;
   return {
     distancePct: parseFloat(distance.toFixed(3)),
@@ -375,9 +385,14 @@ async function adcWarmUp(symbol) {
   }
 }
 
-async function adcEvaluateTick(symbol, currentPrice) {
+// ── FIX: binancePrice param added — always use Binance price for distance ──
+async function adcEvaluateTick(symbol, currentPrice, binancePrice) {
   const state = adcGetState(symbol);
   if (!state.warmUpDone) return;
+
+  // binancePrice is the authoritative price for distance calculation.
+  // Falls back to currentPrice only if Binance fetch failed (binancePrice === 0).
+  const priceForDist = (binancePrice && binancePrice > 0) ? binancePrice : currentPrice;
 
   try {
     const candles    = await adcFetchKlines(symbol, 3);
@@ -386,11 +401,11 @@ async function adcEvaluateTick(symbol, currentPrice) {
     const lastClosed = closed[closed.length - 1];
 
     if (state.lastCandleTime !== null && lastClosed.time <= state.lastCandleTime) {
-      // No new candle, but still send distance update with the CURRENT live price
-      if (currentPrice && currentPrice > 0 && state.warmUpDone) {
-        const distInfo = calcAdcDistance(currentPrice, state);
+      // No new candle — send distance using Binance price
+      if (priceForDist > 0 && state.warmUpDone) {
+        const distInfo = calcAdcDistance(priceForDist, state);
         if (distInfo && mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('adc-distance', { symbol, ...distInfo, price: currentPrice });
+          mainWindow.webContents.send('adc-distance', { symbol, ...distInfo, price: priceForDist });
         }
       }
       return;
@@ -399,8 +414,7 @@ async function adcEvaluateTick(symbol, currentPrice) {
     const result = adcProcessCandle(lastClosed, state);
     state.lastCandleTime = lastClosed.time;
 
-    // Always use the live price (currentPrice) for distance, not the closed candle close
-    const priceForDist = (currentPrice && currentPrice > 0) ? currentPrice : lastClosed.close;
+    // Always use Binance price for distance, not closed candle close
     const distInfo = calcAdcDistance(priceForDist, state);
     if (distInfo && mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('adc-distance', { symbol, ...distInfo, price: priceForDist });
@@ -416,11 +430,11 @@ async function adcEvaluateTick(symbol, currentPrice) {
       adcFireAlert(symbol, 'SHORT', lastClosed.close);
     }
   } catch (err) {
-    // On kline fetch error, still send distance with live price if we have ADC state
-    if (currentPrice && currentPrice > 0 && state.warmUpDone) {
-      const distInfo = calcAdcDistance(currentPrice, state);
+    // On kline fetch error, still send distance with Binance price if available
+    if (priceForDist > 0 && state.warmUpDone) {
+      const distInfo = calcAdcDistance(priceForDist, state);
       if (distInfo && mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('adc-distance', { symbol, ...distInfo, price: currentPrice });
+        mainWindow.webContents.send('adc-distance', { symbol, ...distInfo, price: priceForDist });
       }
     }
     log('WARN', `[ADC] Error ${symbol}`, { error: err.message });
@@ -707,22 +721,42 @@ ipcMain.handle('config:save', (_, cfg) => {
 });
 ipcMain.handle('app:version', () => CURRENT_VERSION);
 
+// ── FIX: fetch Binance price separately for each symbol so ADC distance
+//    is always calculated against Binance, regardless of selected provider.
 ipcMain.handle('tickers:fetch', async (_, { symbols, provider }) => {
   const ticks = await fetchAllTickers(symbols, provider);
-  // For each ticker, immediately send ADC distance update with the fresh live price
-  // then evaluate for new candles in background
+
+  // Fetch Binance prices in parallel for all symbols (for ADC distance only)
+  const binancePrices = {};
+  if (provider !== 'binance') {
+    // Only fetch separately when using a different provider
+    await Promise.allSettled(
+      symbols.map(async sym => {
+        const p = await fetchBinancePriceOnly(sym);
+        if (p > 0) binancePrices[sym] = p;
+      })
+    );
+  } else {
+    // Already using Binance — reuse tick prices
+    ticks.forEach(t => { binancePrices[t.symbol] = t.price; });
+  }
+
   for (const tick of ticks) {
-    // Send distance update immediately with live price (no kline fetch needed)
-    const state = adcGetState(tick.symbol);
-    if (state.warmUpDone && tick.price > 0) {
-      const distInfo = calcAdcDistance(tick.price, state);
+    const bPrice = binancePrices[tick.symbol] || tick.price;
+    const state  = adcGetState(tick.symbol);
+
+    // Send distance immediately with Binance price (no kline fetch needed)
+    if (state.warmUpDone && bPrice > 0) {
+      const distInfo = calcAdcDistance(bPrice, state);
       if (distInfo && mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('adc-distance', { symbol: tick.symbol, ...distInfo, price: tick.price });
+        mainWindow.webContents.send('adc-distance', { symbol: tick.symbol, ...distInfo, price: bPrice });
       }
     }
-    // Background: check for new candles and potential signals
+
+    // Background: check for new candles and potential signals, passing Binance price
+    const capturedBPrice = bPrice;
     setImmediate(() =>
-      adcEvaluateTick(tick.symbol, tick.price).catch(err =>
+      adcEvaluateTick(tick.symbol, tick.price, capturedBPrice).catch(err =>
         log('WARN', `[ADC] bg error ${tick.symbol}`, { error: err.message })
       )
     );
@@ -793,10 +827,13 @@ ipcMain.handle('adc:calibrate', async (_, { symbol }) => {
   return { started: true };
 });
 
-ipcMain.handle('adc:get-distance', (_, { symbol, price }) => {
+ipcMain.handle('adc:get-distance', async (_, { symbol, price }) => {
   const state = adcGetState(symbol);
   if (!state.warmUpDone) return null;
-  return calcAdcDistance(price, state);
+  // ── FIX: fetch fresh Binance price instead of using provider price ──
+  const bPrice = await fetchBinancePriceOnly(symbol);
+  const priceToUse = (bPrice > 0) ? bPrice : price;
+  return calcAdcDistance(priceToUse, state);
 });
 
 // ─────────────────────────────────────────────
