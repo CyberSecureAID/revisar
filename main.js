@@ -1,9 +1,3 @@
-/**
- * Sniper Alert — Main Process v3.4
- * Real-time Binance Spot prices via /api/v3/ticker/price (matches TradingView tick-by-tick).
- * ADC — Algoritmo de Detección de Ciclos. Internals hidden from UI.
- * All trade alerts delivered as OS desktop notifications only.
- */
 'use strict';
 
 const { app, BrowserWindow, ipcMain, Notification, shell, net } = require('electron');
@@ -83,7 +77,6 @@ function netGet(url, timeoutMs = 8000) {
   });
 }
 
-// ─── Symbol maps ───────────────────────────────────────────────────
 const BINANCE_TO_COINGECKO = {
   BTCUSDT:'bitcoin', ETHUSDT:'ethereum', SOLUSDT:'solana',
   BNBUSDT:'binancecoin', XRPUSDT:'ripple', DOGEUSDT:'dogecoin',
@@ -113,11 +106,6 @@ function makeTick(symbol, price, change24h, volume, high24h, low24h, source) {
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────
-//  BINANCE REAL-TIME PRICES
-//  /api/v3/ticker/price  → exact live price (same feed as TradingView)
-//  /api/v3/ticker/24hr   → 24h stats (cached 30 s to respect rate limits)
-// ─────────────────────────────────────────────────────────────────────
 const BINANCE_PRICE_BASE = [
   'https://api.binance.com/api/v3/ticker/price?symbol=',
   'https://data.binance.com/api/v3/ticker/price?symbol=',
@@ -135,7 +123,7 @@ const BINANCE_KLINE_BASE = [
 ];
 
 const statsCache = {};
-const STATS_TTL  = 30000; // 30 s
+const STATS_TTL  = 30000;
 
 async function getStats(symbol) {
   const now = Date.now();
@@ -152,7 +140,6 @@ async function getStats(symbol) {
 }
 
 async function fetchOneBinance(symbol) {
-  // Live price — matches TradingView to the cent
   let livePrice = null;
   for (const base of BINANCE_PRICE_BASE) {
     try {
@@ -244,9 +231,6 @@ async function fetchAllTickers(symbols, provider = 'binance') {
   return ticks;
 }
 
-// ─────────────────────────────────────────────
-//  UPDATE CHECKER
-// ─────────────────────────────────────────────
 const CURRENT_VERSION     = app.getVersion();
 const UPDATE_MANIFEST_URL = 'https://raw.githubusercontent.com/CyberSecureAID/sniper-alert/main/version.json';
 
@@ -270,8 +254,8 @@ function compareVersions(a, b) {
 
 // ═══════════════════════════════════════════════════════════════════════
 //  ADC — Algoritmo de Detección de Ciclos
-//  Pine Script v6 logic, Binance Spot klines (= TradingView source).
-//  Parameters intentionally not exposed in the UI.
+//  Supertrend con Pine Script v6 logic, Binance Spot klines
+//  Incluye cálculo de distancia porcentual a la línea ADC
 // ═══════════════════════════════════════════════════════════════════════
 const ADC_PERIOD      = 2;
 const ADC_MULT        = 19.0;
@@ -288,6 +272,8 @@ function adcGetState(symbol) {
       prevTendencia: null, prevATR: null,
       warmUpDone: false, warmUpInProgress: false,
       lastCandleTime: null, lastLongMs: 0, lastShortMs: 0,
+      // ADC line values for distance calculation
+      currentArriba: null, currentAbajo: null, currentTendencia: null,
     });
   }
   return adcStates.get(symbol);
@@ -324,10 +310,42 @@ function adcProcessCandle(candle, state) {
   const senialCompra = tendencia === 1  && state.prevTendencia === -1;
   const senialVenta  = tendencia === -1 && state.prevTendencia ===  1;
 
-  state.prevClose = close; state.prevArriba = arriba; state.prevAbajo = abajo;
-  state.prevTendencia = tendencia; state.prevATR = atr;
+  state.prevClose = close;
+  state.prevArriba = arriba;
+  state.prevAbajo = abajo;
+  state.prevTendencia = tendencia;
+  state.prevATR = atr;
 
-  return { tendencia, senialCompra, senialVenta };
+  // Store current ADC line values for distance calculation
+  state.currentArriba = arriba;
+  state.currentAbajo = abajo;
+  state.currentTendencia = tendencia;
+
+  return { tendencia, senialCompra, senialVenta, arriba, abajo };
+}
+
+// Calculate percentage distance from current price to ADC line
+function calcAdcDistance(price, state) {
+  if (!state.warmUpDone || price <= 0) return null;
+  
+  let adcLine = null;
+  if (state.currentTendencia === 1 && state.currentArriba !== null) {
+    // Uptrend: ADC line is below price (arriba = support line)
+    adcLine = state.currentArriba;
+  } else if (state.currentTendencia === -1 && state.currentAbajo !== null) {
+    // Downtrend: ADC line is above price (abajo = resistance line)
+    adcLine = state.currentAbajo;
+  }
+  
+  if (adcLine === null) return null;
+  
+  const distance = ((price - adcLine) / adcLine) * 100;
+  return {
+    distancePct: parseFloat(distance.toFixed(3)),
+    adcLine: parseFloat(adcLine.toFixed(8)),
+    trend: state.currentTendencia === 1 ? 'LONG' : 'SHORT',
+    // positive = price above line, negative = price below line
+  };
 }
 
 async function adcFetchKlines(symbol, limit) {
@@ -378,7 +396,7 @@ async function adcWarmUp(symbol) {
   }
 }
 
-async function adcEvaluateTick(symbol) {
+async function adcEvaluateTick(symbol, currentPrice) {
   const state = adcGetState(symbol);
   if (!state.warmUpDone) return;
   try {
@@ -386,10 +404,26 @@ async function adcEvaluateTick(symbol) {
     const closed     = candles.filter(c => c.isClosed);
     if (!closed.length) return;
     const lastClosed = closed[closed.length - 1];
-    if (state.lastCandleTime !== null && lastClosed.time <= state.lastCandleTime) return;
+    if (state.lastCandleTime !== null && lastClosed.time <= state.lastCandleTime) {
+      // Even if no new candle, recalculate distance with current live price
+      if (currentPrice && state.warmUpDone) {
+        const distInfo = calcAdcDistance(currentPrice, state);
+        if (distInfo && mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('adc-distance', { symbol, ...distInfo, price: currentPrice });
+        }
+      }
+      return;
+    }
 
     const result = adcProcessCandle(lastClosed, state);
     state.lastCandleTime = lastClosed.time;
+
+    // Send distance update with live price
+    const priceForDist = currentPrice || lastClosed.close;
+    const distInfo = calcAdcDistance(priceForDist, state);
+    if (distInfo && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('adc-distance', { symbol, ...distInfo, price: priceForDist });
+    }
 
     const now = Date.now();
     if (result.senialCompra && now - state.lastLongMs  >= ADC_COOLDOWN_MS) {
@@ -405,6 +439,17 @@ async function adcEvaluateTick(symbol) {
   }
 }
 
+// Send live price distance updates periodically (between candle closes)
+async function adcSendDistanceUpdate(symbol, currentPrice) {
+  const state = adcGetState(symbol);
+  if (!state.warmUpDone || !currentPrice) return;
+  
+  const distInfo = calcAdcDistance(currentPrice, state);
+  if (distInfo && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('adc-distance', { symbol, ...distInfo, price: currentPrice });
+  }
+}
+
 function adcFireAlert(symbol, type, price) {
   const ticker = symbol.replace('USDT', '');
   const isLong = type === 'LONG';
@@ -412,13 +457,13 @@ function adcFireAlert(symbol, type, price) {
   const dir    = isLong ? 'below' : 'above';
 
   const notifBody =
-    `${emoji} ${type}: ${ticker} @ ${price}\n` +
+    `${emoji} ${type}: ${ticker} @ $${price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 8})}\n` +
     `‼️ 10X Isolated | TF: 15m`;
 
   const fullBody =
     `${emoji} ( ${type} ): ${symbol}\n\n` +
     `‼️ 10X - Isolated\n\n` +
-    `1️⃣ Entry 1: ${price}\n\n` +
+    `1️⃣ Entry 1: $${price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 8})}\n\n` +
     `For Entry 2: Place a limit order 2.5% ${dir} Entry 1\n\n` +
     `For Entry 3: Place a limit order 5% ${dir} Entry 1\n\n` +
     `🎯 TP1: Take partial profit and move SL to entry when +25% profit\n\n` +
@@ -429,26 +474,188 @@ function adcFireAlert(symbol, type, price) {
 
   log('ALERT', `[ADC] ${type} ${symbol}`, { price });
 
-  // OS desktop notification — bottom-right corner of desktop
   if (Notification.isSupported()) {
     const n = new Notification({
       title:   `${emoji} ADC ${type} — ${ticker}`,
       body:    notifBody,
       icon:    path.join(__dirname, 'assets', 'icon.png'),
       silent:  false,
-      urgency: 'normal',
+      urgency: 'critical',
     });
-    n.on('click', () => { if (mainWindow) mainWindow.focus(); });
+    n.on('click', () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } });
     n.show();
   }
 
-  // Send to renderer for card flash + alert sound only — no in-app overlay
+  // Show persistent alert window
+  showPersistentAlert(symbol, type, price, fullBody);
+
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('adc-signal', {
       type, symbol, ticker, price, body: fullBody,
       time: new Date().toISOString(),
     });
   }
+}
+
+// ─────────────────────────────────────────────
+//  PERSISTENT ALERT WINDOW
+// ─────────────────────────────────────────────
+let alertWindow = null;
+
+function showPersistentAlert(symbol, type, price, body) {
+  // Close previous alert if any
+  if (alertWindow && !alertWindow.isDestroyed()) {
+    alertWindow.close();
+    alertWindow = null;
+  }
+
+  alertWindow = new BrowserWindow({
+    width: 460,
+    height: 540,
+    frame: false,
+    alwaysOnTop: true,
+    resizable: false,
+    skipTaskbar: false,
+    backgroundColor: '#0a0d16',
+    icon: path.join(__dirname, 'assets', 'icon.png'),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+    }
+  });
+
+  const ticker = symbol.replace('USDT', '');
+  const isLong = type === 'LONG';
+  const priceFormatted = typeof price === 'number'
+    ? price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 })
+    : price;
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com;">
+<title>🚨 ADC Alert</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:'Rajdhani',sans-serif;background:#050810;color:#fff;-webkit-font-smoothing:antialiased;}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;}
+.bg-pulse{position:absolute;inset:0;pointer-events:none;animation:bgPulse 0.8s ease infinite;}
+@keyframes bgPulse{0%,100%{background:${isLong ? 'rgba(0,229,160,0.04)' : 'rgba(255,56,96,0.04)'};}50%{background:${isLong ? 'rgba(0,229,160,0.12)' : 'rgba(255,56,96,0.12)'};}}
+.close-btn{
+  position:absolute;top:12px;right:14px;
+  background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
+  color:#fff;width:28px;height:28px;border-radius:50%;font-size:16px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:background 0.2s,transform 0.2s;-webkit-app-region:no-drag;z-index:10;
+}
+.close-btn:hover{background:rgba(255,56,96,0.5);border-color:#ff3860;transform:scale(1.1);}
+.drag-area{position:absolute;top:0;left:0;right:44px;height:44px;-webkit-app-region:drag;}
+.container{text-align:center;padding:30px 28px;position:relative;z-index:1;width:100%;}
+.signal-emoji{font-size:52px;margin-bottom:8px;display:block;animation:bounce 0.6s ease infinite alternate;}
+@keyframes bounce{from{transform:translateY(0);}to{transform:translateY(-8px);}}
+.signal-type{
+  font-size:42px;font-weight:700;letter-spacing:3px;margin-bottom:4px;
+  color:${isLong ? '#00e5a0' : '#ff3860'};
+  text-shadow:0 0 20px ${isLong ? 'rgba(0,229,160,0.6)' : 'rgba(255,56,96,0.6)'};
+  animation:textGlow 1s ease infinite alternate;
+}
+@keyframes textGlow{from{text-shadow:0 0 10px ${isLong ? 'rgba(0,229,160,0.4)' : 'rgba(255,56,96,0.4)'};}to{text-shadow:0 0 30px ${isLong ? 'rgba(0,229,160,0.9)' : 'rgba(255,56,96,0.9)'},0 0 60px ${isLong ? 'rgba(0,229,160,0.4)' : 'rgba(255,56,96,0.4)'};}}
+.ticker{font-family:'Share Tech Mono',monospace;font-size:22px;color:#7a86a8;margin-bottom:16px;letter-spacing:4px;}
+.price-box{
+  background:rgba(0,0,0,0.4);border:1px solid ${isLong ? 'rgba(0,229,160,0.3)' : 'rgba(255,56,96,0.3)'};
+  border-radius:10px;padding:14px 20px;margin-bottom:16px;
+}
+.price-label{font-family:'Share Tech Mono',monospace;font-size:9px;color:#3a4260;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;}
+.price-value{font-family:'Share Tech Mono',monospace;font-size:26px;font-weight:700;color:${isLong ? '#00e5a0' : '#ff3860'};}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
+.info-cell{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:10px;}
+.info-key{font-family:'Share Tech Mono',monospace;font-size:8px;color:#3a4260;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;}
+.info-val{font-family:'Share Tech Mono',monospace;font-size:12px;color:#e8f0ff;font-weight:600;}
+.time-display{font-family:'Share Tech Mono',monospace;font-size:9px;color:#3a4260;margin-bottom:14px;}
+.dismiss-btn{
+  width:100%;padding:11px;background:${isLong ? 'rgba(0,229,160,0.15)' : 'rgba(255,56,96,0.15)'};
+  border:1px solid ${isLong ? 'rgba(0,229,160,0.4)' : 'rgba(255,56,96,0.4)'};
+  color:${isLong ? '#00e5a0' : '#ff3860'};font-family:'Rajdhani',sans-serif;
+  font-weight:700;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;
+  border-radius:8px;cursor:pointer;transition:background 0.2s,transform 0.15s;
+}
+.dismiss-btn:hover{background:${isLong ? 'rgba(0,229,160,0.3)' : 'rgba(255,56,96,0.3)'}; transform:translateY(-1px);}
+.dismiss-btn:active{transform:scale(0.98);}
+.border-glow{
+  position:absolute;inset:0;border-radius:0;pointer-events:none;
+  border:1px solid ${isLong ? 'rgba(0,229,160,0.2)' : 'rgba(255,56,96,0.2)'};
+  animation:borderPulse 1.2s ease infinite;
+}
+@keyframes borderPulse{0%,100%{opacity:0.3;}50%{opacity:1;}}
+</style>
+</head>
+<body>
+<div class="bg-pulse"></div>
+<div class="border-glow"></div>
+<div class="drag-area"></div>
+<button class="close-btn" onclick="window.sniperAPI.closeAlertWindow()" title="Cerrar alerta">×</button>
+<div class="container">
+  <span class="signal-emoji">${isLong ? '🟢' : '🔴'}</span>
+  <div class="signal-type">ADC ${type}</div>
+  <div class="ticker">${ticker} / USDT</div>
+  <div class="price-box">
+    <div class="price-label">Precio de señal</div>
+    <div class="price-value">$${priceFormatted}</div>
+  </div>
+  <div class="info-grid">
+    <div class="info-cell">
+      <div class="info-key">Timeframe</div>
+      <div class="info-val">15 min</div>
+    </div>
+    <div class="info-cell">
+      <div class="info-key">Apalancamiento</div>
+      <div class="info-val">10× Isolated</div>
+    </div>
+    <div class="info-cell">
+      <div class="info-key">Dirección</div>
+      <div class="info-val" style="color:${isLong ? '#00e5a0' : '#ff3860'}">${isLong ? '▲ LONG' : '▼ SHORT'}</div>
+    </div>
+    <div class="info-cell">
+      <div class="info-key">Algoritmo</div>
+      <div class="info-val">ADC v3.4</div>
+    </div>
+  </div>
+  <div class="time-display" id="time-display">—</div>
+  <button class="dismiss-btn" onclick="window.sniperAPI.closeAlertWindow()">
+    ✓ Entendido — Cerrar alerta
+  </button>
+</div>
+<script>
+  document.getElementById('time-display').textContent = new Date().toLocaleString('es-ES', {
+    day:'2-digit', month:'2-digit', year:'numeric',
+    hour:'2-digit', minute:'2-digit', second:'2-digit'
+  });
+<\/script>
+</body>
+</html>`;
+
+  alertWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+  alertWindow.once('ready-to-show', () => {
+    if (alertWindow && !alertWindow.isDestroyed()) {
+      alertWindow.show();
+      alertWindow.focus();
+      // Send sound trigger to main window for persistent beeping
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('start-persistent-sound', { type, symbol, price });
+      }
+    }
+  });
+  alertWindow.on('closed', () => {
+    alertWindow = null;
+    // Stop persistent sound when alert window is closed
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('stop-persistent-sound');
+    }
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -531,7 +738,7 @@ ipcMain.handle('tickers:fetch', async (_, { symbols, provider }) => {
   const ticks = await fetchAllTickers(symbols, provider);
   for (const tick of ticks) {
     setImmediate(() =>
-      adcEvaluateTick(tick.symbol).catch(err =>
+      adcEvaluateTick(tick.symbol, tick.price).catch(err =>
         log('WARN', `[ADC] bg error ${tick.symbol}`, { error: err.message })
       )
     );
@@ -557,7 +764,14 @@ ipcMain.handle('notification:send', (_, { title, body }) => {
   }
 });
 
-ipcMain.handle('window:close',          () => { if (adminWindow?.isFocused()) { adminWindow.close(); } else { app.quit(); } });
+ipcMain.handle('window:close', () => {
+  if (alertWindow && !alertWindow.isDestroyed()) { alertWindow.close(); return; }
+  if (adminWindow && !adminWindow.isDestroyed() && adminWindow.isFocused()) { adminWindow.close(); return; }
+  app.quit();
+});
+ipcMain.handle('window:close-alert', () => {
+  if (alertWindow && !alertWindow.isDestroyed()) { alertWindow.close(); }
+});
 ipcMain.handle('window:minimize',       () => { const w = adminWindow?.isFocused() ? adminWindow : mainWindow; if (w) w.minimize(); });
 ipcMain.handle('window:maximize',       () => { const w = adminWindow?.isFocused() ? adminWindow : mainWindow; if (!w) return; w.isMaximized() ? w.unmaximize() : w.maximize(); });
 ipcMain.handle('window:setAlwaysOnTop', (_, flag) => { if (mainWindow) mainWindow.setAlwaysOnTop(!!flag); });
@@ -576,7 +790,12 @@ ipcMain.handle('logs:read', () => readLogs(300));
 ipcMain.handle('adc:status', () => {
   const result = {};
   for (const [symbol, state] of adcStates.entries()) {
-    result[symbol] = { ready: state.warmUpDone, ciclo: state.prevTendencia };
+    result[symbol] = {
+      ready: state.warmUpDone,
+      ciclo: state.prevTendencia,
+      adcLine: state.currentTendencia === 1 ? state.currentArriba : state.currentAbajo,
+      tendencia: state.currentTendencia,
+    };
   }
   return result;
 });
@@ -588,6 +807,12 @@ ipcMain.handle('adc:calibrate', async (_, { symbol }) => {
     log('WARN', `[ADC] on-demand calibration error ${symbol}`, { error: err.message })
   );
   return { started: true };
+});
+
+ipcMain.handle('adc:get-distance', (_, { symbol, price }) => {
+  const state = adcGetState(symbol);
+  if (!state.warmUpDone) return null;
+  return calcAdcDistance(price, state);
 });
 
 // ─────────────────────────────────────────────
